@@ -1,0 +1,404 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================
+   TESSOLVE EXECUTIVE PORTAL
+   Brand Colors: Orange #E85D24 + Blue #0077C8
+   ================================ */
+
+:root {
+  --tessolve-orange: #E85D24;
+  --tessolve-blue: #0077C8;
+  --tessolve-navy: #004B8D;
+  --base-font-size: 16px;
+}
+
+/* Font Size Classes */
+html.font-small {
+  font-size: 14px;
+}
+
+html.font-medium {
+  font-size: 16px;
+}
+
+html.font-large {
+  font-size: 18px;
+}
+
+/* ================================
+   BASE STYLES
+   ================================ */
+@layer base {
+  body {
+    @apply antialiased;
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Dark mode default */
+  body {
+    @apply bg-slate-950 text-slate-200;
+  }
+
+  /* Light mode */
+  body[data-theme="light"] {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  body:not([data-theme="light"]) ::-webkit-scrollbar-track {
+    @apply bg-dark-900;
+  }
+  body:not([data-theme="light"]) ::-webkit-scrollbar-thumb {
+    @apply bg-dark-700 rounded-full;
+  }
+  body:not([data-theme="light"]) ::-webkit-scrollbar-thumb:hover {
+    @apply bg-dark-600;
+  }
+
+  body[data-theme="light"] ::-webkit-scrollbar-track {
+    background-color: #e2e8f0;
+  }
+  body[data-theme="light"] ::-webkit-scrollbar-thumb {
+    background-color: #94a3b8;
+    border-radius: 9999px;
+  }
+  body[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+    background-color: #64748b;
+  }
+
+  *:focus {
+    @apply outline-none;
+  }
+  *:focus-visible {
+    @apply ring-2 ring-primary-500/50 ring-offset-2;
+  }
+}
+
+/* ================================
+   COMPONENT STYLES
+   ================================ */
+@layer components {
+  /* Glass morphism - Dark */
+  .glass {
+    @apply bg-dark-900/60 backdrop-blur-xl border border-dark-700/50;
+  }
+  .glass-card {
+    @apply bg-dark-900/40 backdrop-blur-xl border border-dark-700/50 rounded-xl;
+  }
+  .glass-panel {
+    @apply bg-dark-900/70 backdrop-blur-xl border border-dark-700/50 rounded-2xl;
+  }
+  .glass-sm {
+    @apply bg-dark-800/50 backdrop-blur-md border border-dark-700/30 rounded-lg;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 font-medium text-sm rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:from-primary-400 hover:to-primary-500 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40;
+  }
+  .btn-accent {
+    @apply btn bg-gradient-to-r from-accent-500 to-accent-600 text-white hover:from-accent-400 hover:to-accent-500 shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40;
+  }
+  .btn-secondary {
+    @apply btn bg-dark-800/80 text-slate-200 border border-dark-600/50 hover:bg-dark-700/80 hover:border-dark-500/50;
+  }
+  .btn-ghost {
+    @apply btn text-slate-300 hover:text-white hover:bg-dark-800/50;
+  }
+  .btn-danger {
+    @apply btn bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30;
+  }
+  .btn-success {
+    @apply btn bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30;
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full px-4 py-2.5 bg-dark-800/50 border border-dark-600/50 rounded-lg text-slate-200 placeholder-slate-500 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all;
+  }
+  .select {
+    @apply w-full px-4 py-2.5 bg-dark-800/50 border border-dark-600/50 rounded-lg text-slate-200 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all cursor-pointer appearance-none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+
+  /* Badges */
+  .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
+  .badge-success { @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30; }
+  .badge-warning { @apply bg-amber-500/20 text-amber-400 border border-amber-500/30; }
+  .badge-error { @apply bg-red-500/20 text-red-400 border border-red-500/30; }
+  .badge-info { @apply bg-primary-500/20 text-primary-400 border border-primary-500/30; }
+  .badge-accent { @apply bg-accent-500/20 text-accent-400 border border-accent-500/30; }
+  .badge-neutral { @apply bg-slate-500/20 text-slate-400 border border-slate-500/30; }
+
+  /* Status dots */
+  .status-dot { @apply w-2 h-2 rounded-full; }
+  .status-dot-success { @apply status-dot bg-emerald-400 shadow-lg shadow-emerald-400/50; }
+  .status-dot-warning { @apply status-dot bg-amber-400 shadow-lg shadow-amber-400/50; }
+  .status-dot-error { @apply status-dot bg-red-400 shadow-lg shadow-red-400/50; }
+  .status-dot-info { @apply status-dot bg-primary-400 shadow-lg shadow-primary-400/50; }
+}
+
+/* ================================
+   LIGHT THEME OVERRIDES
+   Using direct CSS properties to avoid circular @apply
+   ================================ */
+
+/* Glass components - Light */
+body[data-theme="light"] .glass,
+body[data-theme="light"] .glass-card,
+body[data-theme="light"] .glass-panel,
+body[data-theme="light"] .glass-sm {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+
+/* Buttons - Light */
+body[data-theme="light"] .btn-secondary {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+body[data-theme="light"] .btn-secondary:hover {
+  background-color: #e2e8f0 !important;
+}
+body[data-theme="light"] .btn-ghost {
+  color: #475569 !important;
+}
+body[data-theme="light"] .btn-ghost:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+body[data-theme="light"] .btn-danger {
+  background-color: #fef2f2 !important;
+  color: #dc2626 !important;
+  border-color: #fecaca !important;
+}
+
+/* Inputs - Light */
+body[data-theme="light"] .input,
+body[data-theme="light"] .select {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #0f172a !important;
+}
+body[data-theme="light"] .input::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Badges - Light */
+body[data-theme="light"] .badge-success {
+  background-color: #d1fae5 !important;
+  color: #047857 !important;
+  border-color: #a7f3d0 !important;
+}
+body[data-theme="light"] .badge-warning {
+  background-color: #fef3c7 !important;
+  color: #b45309 !important;
+  border-color: #fde68a !important;
+}
+body[data-theme="light"] .badge-error {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+  border-color: #fecaca !important;
+}
+body[data-theme="light"] .badge-info {
+  background-color: #dbeafe !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+body[data-theme="light"] .badge-accent {
+  background-color: #ffedd5 !important;
+  color: #c2410c !important;
+  border-color: #fed7aa !important;
+}
+body[data-theme="light"] .badge-neutral {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Text colors - Light (direct CSS, no @apply) */
+body[data-theme="light"] .text-white {
+  color: #0f172a !important;
+}
+body[data-theme="light"] .text-slate-200 {
+  color: #334155 !important;
+}
+body[data-theme="light"] .text-slate-300 {
+  color: #475569 !important;
+}
+body[data-theme="light"] .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Background colors - Light */
+body[data-theme="light"] .bg-dark-800,
+body[data-theme="light"] .bg-dark-800\/50,
+body[data-theme="light"] .bg-dark-800\/30 {
+  background-color: #f1f5f9 !important;
+}
+body[data-theme="light"] .bg-dark-900,
+body[data-theme="light"] .bg-dark-900\/50,
+body[data-theme="light"] .bg-dark-900\/60,
+body[data-theme="light"] .bg-dark-900\/70,
+body[data-theme="light"] .bg-dark-900\/80 {
+  background-color: #ffffff !important;
+}
+body[data-theme="light"] .bg-slate-800,
+body[data-theme="light"] .bg-slate-800\/50 {
+  background-color: #f1f5f9 !important;
+}
+body[data-theme="light"] .bg-slate-900,
+body[data-theme="light"] .bg-slate-900\/60 {
+  background-color: #ffffff !important;
+}
+
+/* Border colors - Light */
+body[data-theme="light"] .border-dark-600,
+body[data-theme="light"] .border-dark-600\/50,
+body[data-theme="light"] .border-dark-700,
+body[data-theme="light"] .border-dark-700\/50,
+body[data-theme="light"] .border-slate-700,
+body[data-theme="light"] .border-slate-700\/50 {
+  border-color: #e2e8f0 !important;
+}
+
+/* ================================
+   NO ANIMATIONS MODE
+   ================================ */
+body.no-animations,
+body.no-animations * {
+  animation: none !important;
+  transition: none !important;
+}
+
+body.no-animations .animate-fadeIn,
+body.no-animations .animate-slideIn {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* ================================
+   COMPACT VIEW MODE
+   ================================ */
+body.compact-view .glass-card,
+body.compact-view .glass-panel {
+  padding: 1rem;
+}
+body.compact-view .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem;
+}
+body.compact-view .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.5rem;
+}
+body.compact-view .gap-6 { gap: 1rem; }
+body.compact-view .gap-4 { gap: 0.5rem; }
+body.compact-view .p-6 { padding: 1rem; }
+body.compact-view .p-8 { padding: 1.25rem; }
+body.compact-view .text-2xl { font-size: 1.25rem; line-height: 1.75rem; }
+body.compact-view .text-lg { font-size: 1rem; line-height: 1.5rem; }
+body.compact-view .mb-6 { margin-bottom: 1rem; }
+body.compact-view .mb-4 { margin-bottom: 0.5rem; }
+
+/* ================================
+   HIGH CONTRAST MODE
+   ================================ */
+body.high-contrast .text-slate-200,
+body.high-contrast .text-slate-300,
+body.high-contrast .text-slate-400,
+body.high-contrast .text-slate-500 {
+  color: #ffffff !important;
+}
+body.high-contrast .glass-card,
+body.high-contrast .glass-panel,
+body.high-contrast .glass {
+  border-width: 2px !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+body.high-contrast .input,
+body.high-contrast .select {
+  border-width: 2px !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+body.high-contrast .badge {
+  border-width: 2px !important;
+  font-weight: 700 !important;
+}
+
+/* High contrast + Light - using direct CSS properties */
+body.high-contrast[data-theme="light"] .text-slate-200,
+body.high-contrast[data-theme="light"] .text-slate-300,
+body.high-contrast[data-theme="light"] .text-slate-400,
+body.high-contrast[data-theme="light"] .text-slate-500,
+body.high-contrast[data-theme="light"] .text-white {
+  color: #000000 !important;
+}
+body.high-contrast[data-theme="light"] .glass-card,
+body.high-contrast[data-theme="light"] .glass-panel,
+body.high-contrast[data-theme="light"] .glass {
+  border-width: 2px !important;
+  border-color: rgba(0, 0, 0, 0.3) !important;
+}
+body.high-contrast[data-theme="light"] .input,
+body.high-contrast[data-theme="light"] .select {
+  border-width: 2px !important;
+  border-color: rgba(0, 0, 0, 0.5) !important;
+  color: #000000 !important;
+}
+
+/* ================================
+   UTILITY STYLES
+   ================================ */
+@layer utilities {
+  .text-gradient-tessolve {
+    background: linear-gradient(90deg, #E85D24 0%, #E85D24 45%, #0077C8 55%, #0077C8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out forwards;
+  }
+
+  .stagger-children > * {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+}
+
+/* ================================
+   KEYFRAMES
+   ================================ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
