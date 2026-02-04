@@ -29,6 +29,42 @@ from app.schemas.audit import (
     AuditLogListResponse,
     AuditLogStats,
 )
+from app.schemas.client import (
+    ClientBase,
+    ClientCreate,
+    ClientUpdate,
+    ClientResponse,
+    ClientListResponse,
+)
+from app.schemas.employee import (
+    SkillBase,
+    SkillCreate,
+    SkillResponse,
+    EmployeeSkillInfo,
+    EmployeeBase,
+    EmployeeCreate,
+    EmployeeUpdate,
+    EmployeeResponse,
+    EmployeeListResponse,
+    EmployeeBulkImport,
+    EmployeeBulkImportResult,
+    EmployeeRecommendation,
+)
+from app.schemas.task import (
+    TaskBase,
+    TaskCreate,
+    TaskUpdate,
+    TaskAssignmentCreate,
+    TaskAssignmentResponse,
+    TaskResponse,
+    TaskListResponse,
+    AITaskGenerationRequest,
+    AIGeneratedTask,
+    AITaskGenerationResponse,
+    AIEmployeeRecommendationRequest,
+    AIEmployeeRecommendation,
+    AIEmployeeRecommendationResponse,
+)
 
 __all__ = [
     # Auth
@@ -57,4 +93,37 @@ __all__ = [
     "AuditLogFilterRequest",
     "AuditLogListResponse",
     "AuditLogStats",
+    # Client
+    "ClientBase",
+    "ClientCreate",
+    "ClientUpdate",
+    "ClientResponse",
+    "ClientListResponse",
+    # Employee
+    "SkillBase",
+    "SkillCreate",
+    "SkillResponse",
+    "EmployeeSkillInfo",
+    "EmployeeBase",
+    "EmployeeCreate",
+    "EmployeeUpdate",
+    "EmployeeResponse",
+    "EmployeeListResponse",
+    "EmployeeBulkImport",
+    "EmployeeBulkImportResult",
+    "EmployeeRecommendation",
+    # Task
+    "TaskBase",
+    "TaskCreate",
+    "TaskUpdate",
+    "TaskAssignmentCreate",
+    "TaskAssignmentResponse",
+    "TaskResponse",
+    "TaskListResponse",
+    "AITaskGenerationRequest",
+    "AIGeneratedTask",
+    "AITaskGenerationResponse",
+    "AIEmployeeRecommendationRequest",
+    "AIEmployeeRecommendation",
+    "AIEmployeeRecommendationResponse",
 ]
