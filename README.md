@@ -2,6 +2,8 @@
 
 A role-based enterprise application built with FastAPI, React, and PostgreSQL.
 
+> **Base Version**: This version seeds only essential configuration data (permissions, roles, departments, master data, and initial users). No demo/sample services or inventory data is created - the application starts with a clean slate for you to add your own data.
+
 ## Features
 
 - **Services Management**: Track client engagements, resource allocation, and CTI data

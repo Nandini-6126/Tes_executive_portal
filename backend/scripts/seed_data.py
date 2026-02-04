@@ -401,9 +401,14 @@ def print_credentials():
 
 
 def main():
-    """Run the seed script."""
+    """Run the seed script.
+    
+    BASE VERSION: Seeds only essential configuration data (permissions, roles, 
+    departments, master data, and initial users). No demo/dummy services or 
+    inventory data is created - the application starts with a clean slate.
+    """
     print("\n" + "=" * 60)
-    print("TESSOLVE EXECUTIVE PORTAL - DATABASE SEED")
+    print("TESSOLVE EXECUTIVE PORTAL - DATABASE SEED (BASE VERSION)")
     print("=" * 60 + "\n")
     
     db = SessionLocal()
@@ -412,16 +417,21 @@ def main():
         # Create tables
         create_tables(db)
         
-        # Seed data in order
+        # Seed essential configuration data
         permissions = seed_permissions(db)
         roles = seed_roles(db, permissions)
         departments = seed_departments(db)
         seed_master_data(db)
         users = seed_users(db, roles, departments)
-        seed_services(db, users)
-        seed_inventory_data(db)
+        
+        # NOTE: Demo/dummy data seeding is disabled for the base version
+        # Uncomment the following lines to seed sample services and inventory:
+        # seed_services(db, users)
+        # seed_inventory_data(db)
         
         print("\n✅ Database seeding completed successfully!")
+        print("\n📋 BASE VERSION: No demo services or inventory data created.")
+        print("   Users can add their own data through the application.")
         print_credentials()
         
     except Exception as e:
