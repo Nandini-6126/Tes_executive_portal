@@ -74,11 +74,29 @@ export const NAV_ITEMS = [
     permissions: [], // All authenticated users
   },
   {
+    id: 'divider-0',
+    type: 'divider',
+    label: 'BUSINESS',
+  },
+  {
     id: 'clients',
     label: 'Clients',
     path: '/clients',
     icon: 'Building2',
     permissions: [PERMISSIONS.SERVICES_READ],
+  },
+  {
+    id: 'inquiries',
+    label: 'Inquiries',
+    path: '/inquiries',
+    icon: 'FileText',
+    permissions: [PERMISSIONS.SERVICES_READ],
+    badge: 'Pipeline',
+  },
+  {
+    id: 'divider-1',
+    type: 'divider',
+    label: 'OPERATIONS',
   },
   {
     id: 'employees',
@@ -96,10 +114,6 @@ export const NAV_ITEMS = [
     badge: 'AI',
   },
   {
-    id: 'divider-1',
-    type: 'divider',
-  },
-  {
     id: 'inventory',
     label: 'Inventory',
     path: '/inventory',
@@ -107,15 +121,9 @@ export const NAV_ITEMS = [
     permissions: [PERMISSIONS.SERVICES_READ],
   },
   {
-    id: 'analytics',
-    label: 'Analytics',
-    path: '/analytics',
-    icon: 'BarChart3',
-    permissions: [PERMISSIONS.ANALYTICS_READ],
-  },
-  {
     id: 'divider-2',
     type: 'divider',
+    label: 'ADMIN',
   },
   {
     id: 'admin',

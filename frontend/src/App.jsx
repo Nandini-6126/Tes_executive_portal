@@ -10,6 +10,7 @@ import ClientsPage from './pages/ClientsPage';
 import ServicesPage from './pages/ServicesPage';
 import ServiceDetailPage from './pages/ServiceDetailPage';
 import EmployeesPage from './pages/EmployeesPage';
+import InquiriesPage from './pages/InquiriesPage';
 import NewCustomersPage from './pages/NewCustomersPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
@@ -39,6 +40,7 @@ export default function App() {
                 <Route path="/services" element={<ProtectedRoute permissions={[PERMISSIONS.SERVICES_READ]}><ServicesPage /></ProtectedRoute>} />
                 <Route path="/services/:id" element={<ProtectedRoute permissions={[PERMISSIONS.SERVICES_READ]}><ServiceDetailPage /></ProtectedRoute>} />
                 <Route path="/employees" element={<ProtectedRoute permissions={[PERMISSIONS.SERVICES_READ]}><EmployeesPage /></ProtectedRoute>} />
+                <Route path="/inquiries" element={<ProtectedRoute permissions={[PERMISSIONS.SERVICES_READ]}><InquiriesPage /></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute permissions={[PERMISSIONS.SERVICES_READ]}><InventoryPage /></ProtectedRoute>} />
                 <Route path="/task-pilot" element={<ProtectedRoute permissions={[PERMISSIONS.SERVICES_READ]}><TaskPilotPage /></ProtectedRoute>} />
                 <Route path="/analytics" element={<ProtectedRoute permissions={[PERMISSIONS.ANALYTICS_READ]}><AnalyticsPage /></ProtectedRoute>} />

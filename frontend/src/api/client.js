@@ -124,6 +124,24 @@ export const aiAPI = {
   status: () => client.get('/ai/status'),
 };
 
+// Dashboard API
+export const dashboardAPI = {
+  getAnalytics: () => client.get('/dashboard/analytics'),
+  getSummary: () => client.get('/dashboard/summary'),
+};
+
+// Inquiries API
+export const inquiriesAPI = {
+  getAll: (params) => client.get('/inquiries', { params }),
+  getById: (id) => client.get(`/inquiries/${id}`),
+  create: (data) => client.post('/inquiries', data),
+  update: (id, data) => client.put(`/inquiries/${id}`, data),
+  delete: (id) => client.delete(`/inquiries/${id}`),
+  getStats: () => client.get('/inquiries/stats'),
+  addActivity: (id, data) => client.post(`/inquiries/${id}/activities`, data),
+  convert: (id, data) => client.post(`/inquiries/${id}/convert`, data),
+};
+
 // Clients API
 export const clientsAPI = {
   getAll: (params) => client.get('/clients', { params }),
