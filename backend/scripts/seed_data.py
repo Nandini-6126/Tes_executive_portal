@@ -144,6 +144,62 @@ def seed_departments(db: Session) -> dict:
     return departments
 
 
+def seed_skills(db: Session) -> None:
+    """Create initial skills for employees."""
+    print("Seeding skills...")
+    
+    from app.models.employee import Skill
+    
+    skills_data = [
+        # Technical Skills
+        ("Python", "Technical"),
+        ("JavaScript", "Technical"),
+        ("TypeScript", "Technical"),
+        ("React", "Technical"),
+        ("Node.js", "Technical"),
+        ("Java", "Technical"),
+        ("SQL", "Technical"),
+        ("PostgreSQL", "Technical"),
+        ("MongoDB", "Technical"),
+        ("AWS", "Technical"),
+        ("Azure", "Technical"),
+        ("Docker", "Technical"),
+        ("Kubernetes", "Technical"),
+        ("Git", "Technical"),
+        ("REST API", "Technical"),
+        ("GraphQL", "Technical"),
+        ("Machine Learning", "Technical"),
+        ("Data Analysis", "Technical"),
+        # Soft Skills
+        ("Project Management", "Soft"),
+        ("Communication", "Soft"),
+        ("Leadership", "Soft"),
+        ("Problem Solving", "Soft"),
+        ("Teamwork", "Soft"),
+        ("Time Management", "Soft"),
+        # Domain Skills
+        ("Requirements Analysis", "Domain"),
+        ("System Design", "Domain"),
+        ("Architecture", "Domain"),
+        ("Testing", "Domain"),
+        ("QA", "Domain"),
+        ("DevOps", "Domain"),
+        ("Documentation", "Domain"),
+        ("Agile", "Domain"),
+        ("Scrum", "Domain"),
+    ]
+    
+    created_count = 0
+    for name, category in skills_data:
+        if not db.query(Skill).filter(Skill.name == name).first():
+            skill = Skill(name=name, category=category, is_active=True)
+            db.add(skill)
+            created_count += 1
+    
+    db.commit()
+    print(f"✓ {created_count} skills created")
+
+
 def seed_master_data(db: Session) -> None:
     """Create initial master data entries."""
     print("Seeding master data...")
@@ -422,6 +478,7 @@ def main():
         roles = seed_roles(db, permissions)
         departments = seed_departments(db)
         seed_master_data(db)
+        seed_skills(db)
         users = seed_users(db, roles, departments)
         
         # NOTE: Demo/dummy data seeding is disabled for the base version
