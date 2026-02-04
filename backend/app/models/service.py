@@ -55,6 +55,7 @@ class Service(Base, TimestampMixin, SoftDeleteMixin):
     """
     Service engagement - represents a client contract/engagement.
     This is the main business entity that managers will create and track.
+    Services belong to Clients.
     """
     
     __tablename__ = "services"
@@ -66,7 +67,10 @@ class Service(Base, TimestampMixin, SoftDeleteMixin):
     description: Mapped[Optional[str]] = mapped_column(Text)
     notes: Mapped[Optional[str]] = mapped_column(Text)  # Manager notes
     
-    # Customer Info
+    # Client relationship (optional for backward compatibility)
+    client_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('clients.id'), nullable=True)
+    
+    # Customer Info (kept for backward compatibility, but client_id is preferred)
     customer_name: Mapped[str] = mapped_column(String(255), nullable=False)
     customer_type: Mapped[CustomerType] = mapped_column(
         SQLEnum(CustomerType), 
@@ -122,6 +126,7 @@ class Service(Base, TimestampMixin, SoftDeleteMixin):
     cti_classification: Mapped[Optional[str]] = mapped_column(String(50), default="internal")
     
     # Relationships
+    client = relationship("Client", back_populates="services")
     projects: Mapped[List["Project"]] = relationship("Project", back_populates="service", cascade="all, delete-orphan")
     technologies = relationship("Technology", secondary=service_technologies, backref="services")
     manager = relationship("User", foreign_keys=[manager_id])
