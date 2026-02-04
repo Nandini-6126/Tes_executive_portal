@@ -50,6 +50,19 @@ from app.schemas.employee import (
     EmployeeBulkImportResult,
     EmployeeRecommendation,
 )
+from app.schemas.inquiry import (
+    InquiryActivityBase,
+    InquiryActivityCreate,
+    InquiryActivityResponse,
+    InquiryBase,
+    InquiryCreate,
+    InquiryUpdate,
+    InquiryResponse,
+    InquiryDetailResponse,
+    InquiryListResponse,
+    InquiryConvertRequest,
+    InquiryStats,
+)
 from app.schemas.task import (
     TaskBase,
     TaskCreate,
@@ -112,6 +125,18 @@ __all__ = [
     "EmployeeBulkImport",
     "EmployeeBulkImportResult",
     "EmployeeRecommendation",
+    # Inquiry
+    "InquiryActivityBase",
+    "InquiryActivityCreate",
+    "InquiryActivityResponse",
+    "InquiryBase",
+    "InquiryCreate",
+    "InquiryUpdate",
+    "InquiryResponse",
+    "InquiryDetailResponse",
+    "InquiryListResponse",
+    "InquiryConvertRequest",
+    "InquiryStats",
     # Task
     "TaskBase",
     "TaskCreate",
