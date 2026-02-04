@@ -12,6 +12,9 @@ from app.api.v1.master_data import router as master_data_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.ai import router as ai_router
 from app.api.v1.inventory import router as inventory_router
+from app.api.v1.clients import router as clients_router
+from app.api.v1.employees import router as employees_router
+from app.api.v1.tasks import router as tasks_router
 
 
 # Main API router
@@ -20,11 +23,14 @@ api_router = APIRouter()
 # Include all sub-routers
 api_router.include_router(auth_router)
 api_router.include_router(admin_router)
+api_router.include_router(clients_router)
 api_router.include_router(services_router)
 api_router.include_router(master_data_router)
 api_router.include_router(settings_router)
 api_router.include_router(ai_router)
 api_router.include_router(inventory_router)
+api_router.include_router(employees_router)
+api_router.include_router(tasks_router)
 
 # Health check endpoint
 @api_router.get("/health", tags=["Health"])
