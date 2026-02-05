@@ -17,6 +17,7 @@ export default function TaskPilotPage() {
   const [selectedService, setSelectedService] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -28,12 +29,26 @@ export default function TaskPilotPage() {
 
   const loadServices = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
-      const response = await servicesAPI.getAll({ page: 1, page_size: 100 });
-      setServices(response.data.data || []);
+      // Try the simple list endpoint first (returns array directly)
+      const response = await servicesAPI.getList();
+      const servicesList = Array.isArray(response.data) ? response.data : (response.data.data || []);
+      console.log('Services loaded:', servicesList);
+      setServices(servicesList);
     } catch (err) {
       console.error('Failed to load services:', err);
-      setServices([]);
+      // Fallback to filter endpoint
+      try {
+        const fallbackResponse = await servicesAPI.getAll({ page: 1, page_size: 100 });
+        const servicesList = fallbackResponse.data.data || [];
+        console.log('Services loaded (fallback):', servicesList);
+        setServices(servicesList);
+      } catch (fallbackErr) {
+        console.error('Fallback also failed:', fallbackErr);
+        setServices([]);
+        setLoadError('Failed to load services. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -77,6 +92,19 @@ export default function TaskPilotPage() {
     return (
       <div className="space-y-6 animate-fadeIn">
         <Header isLight={isLight} />
+        
+        {loadError && (
+          <div className={`p-4 rounded-xl flex items-center gap-3 ${
+            isLight ? 'bg-red-50 border border-red-200' : 'bg-red-500/10 border border-red-500/30'
+          }`}>
+            <AlertCircle className="w-5 h-5 text-red-500" />
+            <span className={isLight ? 'text-red-700' : 'text-red-400'}>{loadError}</span>
+            <Button variant="secondary" size="sm" onClick={loadServices} className="ml-auto">
+              Retry
+            </Button>
+          </div>
+        )}
+        
         <div className={`p-12 text-center rounded-xl ${
           isLight ? 'bg-white shadow-sm border border-gray-100' : 'bg-slate-800/50 border border-slate-700/50'
         }`}>
@@ -87,9 +115,14 @@ export default function TaskPilotPage() {
           <p className={`max-w-md mx-auto mb-6 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
             First, add a client and create services under it. Then you can manage tasks and assign employees here.
           </p>
-          <Button variant="primary" onClick={() => window.location.href = '/clients'}>
-            Go to Clients
-          </Button>
+          <div className="flex justify-center gap-3">
+            <Button variant="primary" onClick={() => window.location.href = '/clients'}>
+              Go to Clients
+            </Button>
+            <Button variant="secondary" onClick={loadServices}>
+              Refresh
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -331,6 +364,7 @@ function TaskCard({ task, isLight, onAssign }) {
 
   const statusColors = {
     pending: { bg: 'bg-yellow-100 dark:bg-yellow-500/20', text: 'text-yellow-700 dark:text-yellow-400', icon: Clock },
+    assigned: { bg: 'bg-blue-100 dark:bg-blue-500/20', text: 'text-blue-700 dark:text-blue-400', icon: Clock },
     in_progress: { bg: 'bg-blue-100 dark:bg-blue-500/20', text: 'text-blue-700 dark:text-blue-400', icon: Clock },
     completed: { bg: 'bg-green-100 dark:bg-green-500/20', text: 'text-green-700 dark:text-green-400', icon: CheckCircle },
     blocked: { bg: 'bg-red-100 dark:bg-red-500/20', text: 'text-red-700 dark:text-red-400', icon: AlertCircle },
@@ -347,7 +381,7 @@ function TaskCard({ task, isLight, onAssign }) {
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h3 className={`font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>
-              {task.name}
+              {task.title}
             </h3>
             <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
               {task.status?.replace('_', ' ')}
@@ -370,10 +404,10 @@ function TaskCard({ task, isLight, onAssign }) {
                 {task.estimated_hours}h estimated
               </span>
             )}
-            {task.assigned_to && (
+            {task.current_assignee_name && (
               <span className={`flex items-center gap-1.5 text-sm ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
                 <Users className="w-4 h-4" />
-                Assigned to: {task.assigned_to}
+                Assigned to: {task.current_assignee_name}
               </span>
             )}
           </div>
@@ -419,10 +453,10 @@ function AddTaskModal({ isOpen, onClose, service, onSuccess }) {
   const isLight = isLightTheme;
   
   const [formData, setFormData] = useState({
-    name: '',
+    title: '',
     description: '',
     priority: 'medium',
-    estimated_hours: '',
+    estimated_hours: 8,
     required_skills: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -430,10 +464,10 @@ function AddTaskModal({ isOpen, onClose, service, onSuccess }) {
 
   useEffect(() => {
     setFormData({
-      name: '',
+      title: '',
       description: '',
       priority: 'medium',
-      estimated_hours: '',
+      estimated_hours: 8,
       required_skills: '',
     });
     setError('');
@@ -447,11 +481,18 @@ function AddTaskModal({ isOpen, onClose, service, onSuccess }) {
     setError('');
 
     try {
+      // Parse required_skills from comma-separated string to array
+      const skillsArray = formData.required_skills 
+        ? formData.required_skills.split(',').map(s => s.trim()).filter(s => s)
+        : [];
+      
       await tasksAPI.create({
-        ...formData,
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
         service_id: service.id,
-        estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : null,
-        status: 'pending',
+        estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : 8,
+        required_skills: skillsArray,
       });
       onSuccess();
     } catch (err) {
@@ -481,12 +522,12 @@ function AddTaskModal({ isOpen, onClose, service, onSuccess }) {
         <ModalError message={error} />
 
         <div>
-          <label className={labelClass}>Task Name *</label>
+          <label className={labelClass}>Task Title *</label>
           <input
             type="text"
             required
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             placeholder="e.g., Setup development environment"
             className={inputClass}
           />
@@ -550,7 +591,7 @@ function AddTaskModal({ isOpen, onClose, service, onSuccess }) {
         <Button 
           variant="primary" 
           onClick={handleSubmit}
-          disabled={submitting || !formData.name}
+          disabled={submitting || !formData.title}
         >
           {submitting ? 'Creating...' : 'Create Task'}
         </Button>
@@ -582,9 +623,9 @@ function AIGenerateModal({ isOpen, onClose, service, onSuccess }) {
     setError('');
 
     try {
-      const response = await aiAPI.analyzeService({
+      // Use the tasks AI generate endpoint
+      const response = await tasksAPI.generateTasks({
         service_id: service.id,
-        service_name: service.name,
         additional_context: serviceDetails,
       });
       setResult(response.data);
@@ -602,12 +643,12 @@ function AIGenerateModal({ isOpen, onClose, service, onSuccess }) {
     try {
       for (const task of result.tasks) {
         await tasksAPI.create({
-          name: task.name,
+          title: task.title,
           description: task.description,
           service_id: service.id,
           priority: task.priority || 'medium',
-          estimated_hours: task.estimated_hours,
-          status: 'pending',
+          estimated_hours: task.estimated_hours || 8,
+          required_skills: task.required_skills || [],
         });
       }
       onSuccess(result.tasks);
@@ -702,36 +743,36 @@ function AIGenerateModal({ isOpen, onClose, service, onSuccess }) {
                   <div className="flex items-start justify-between">
                     <div>
                       <h4 className={`font-medium ${isLight ? 'text-gray-800' : 'text-white'}`}>
-                        {task.name}
+                        {task.title}
                       </h4>
                       <p className={`text-sm mt-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                         {task.description}
                       </p>
+                      {task.required_skills && task.required_skills.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {task.required_skills.map((skill, sIdx) => (
+                            <span key={sIdx} className={`text-xs px-2 py-0.5 rounded ${
+                              isLight ? 'bg-gray-100 text-gray-600' : 'bg-slate-700 text-slate-400'
+                            }`}>
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
-                      {task.estimated_hours}h
-                    </span>
+                    <div className="text-right">
+                      <span className={`text-sm font-medium ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                        {task.estimated_hours}h
+                      </span>
+                      <span className={`block text-xs mt-1 px-2 py-0.5 rounded ${
+                        task.priority === 'high' || task.priority === 'critical'
+                          ? 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400'
+                          : 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'
+                      }`}>
+                        {task.priority}
+                      </span>
+                    </div>
                   </div>
-                  
-                  {task.recommended_employees && task.recommended_employees.length > 0 && (
-                    <div className="mt-3 pt-3 border-t" style={{ borderColor: isLight ? '#e5e7eb' : '#374151' }}>
-                      <p className={`text-xs font-medium mb-2 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
-                        Recommended Employees
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {task.recommended_employees.map((emp, empIdx) => (
-                          <span
-                            key={empIdx}
-                            className={`px-2 py-1 rounded text-xs ${
-                              isLight ? 'bg-primary-100 text-primary-700' : 'bg-primary-500/20 text-primary-400'
-                            }`}
-                          >
-                            {emp.name} ({emp.match_score}%)
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -818,7 +859,7 @@ function AssignEmployeeModal({ isOpen, onClose, task, onSuccess }) {
       isOpen={isOpen}
       onClose={onClose}
       title="Assign Employee"
-      subtitle={task ? `Assigning: ${task.name}` : ''}
+      subtitle={task ? `Assigning: ${task.title}` : ''}
       size="md"
     >
       <div className="p-6">

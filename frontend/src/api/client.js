@@ -69,7 +69,11 @@ export const authAPI = {
 // Services API
 export const servicesAPI = {
   filter: (filters) => client.post('/services/filter', filters),
-  getAll: () => client.post('/services/filter', { page: 1, page_size: 1000 }),
+  getAll: (params = {}) => client.post('/services/filter', { 
+    page: params.page || 1, 
+    page_size: params.page_size || 1000,
+    ...params 
+  }),
   getList: () => client.get('/services/list'),  // Simple list for dropdowns
   getById: (id) => client.get(`/services/${id}`),
   create: (data) => client.post('/services', data),
