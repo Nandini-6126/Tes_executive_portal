@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Building2, Plus, Search, Phone, Mail, MapPin, 
-  ChevronRight, Edit2, Trash2, Inbox, ExternalLink, Briefcase
+  ChevronRight, Edit2, Trash2, Inbox, ExternalLink, Briefcase, X
 } from 'lucide-react';
 import { clientsAPI, servicesAPI } from '../api/client';
 import { useSettings } from '../context/SettingsContext';
@@ -22,6 +22,8 @@ export default function ClientsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [expandedClient, setExpandedClient] = useState(null);
   const [clientServices, setClientServices] = useState({});
+  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
+  const [selectedClientForService, setSelectedClientForService] = useState(null);
 
   useEffect(() => {
     loadClients();
@@ -220,7 +222,11 @@ export default function ClientsPage() {
                       <Button 
                         variant="secondary" 
                         size="sm"
-                        onClick={() => navigate(`/services?client_id=${client.id}`)}
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setSelectedClientForService(client); 
+                          setShowAddServiceModal(true); 
+                        }}
                         leftIcon={<Plus className="w-4 h-4" />}
                       >
                         Add Service
@@ -275,12 +281,9 @@ export default function ClientsPage() {
           <h3 className={`text-xl font-medium mb-2 ${isLight ? 'text-gray-800' : 'text-white'}`}>
             No clients yet
           </h3>
-          <p className={`mb-6 max-w-md mx-auto ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-            Get started by adding your first client. You can then add services under each client.
+          <p className={`max-w-md mx-auto ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            Use the "Add Client" button above to get started. You can then add services under each client.
           </p>
-          <Button variant="primary" onClick={() => setShowAddModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
-            Add Your First Client
-          </Button>
         </div>
       )}
 
@@ -319,6 +322,24 @@ export default function ClientsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Service Modal */}
+      {showAddServiceModal && selectedClientForService && (
+        <AddServiceModal
+          isOpen={showAddServiceModal}
+          onClose={() => { setShowAddServiceModal(false); setSelectedClientForService(null); }}
+          client={selectedClientForService}
+          onSuccess={() => {
+            setShowAddServiceModal(false);
+            setSelectedClientForService(null);
+            // Refresh services for this client
+            setClientServices(prev => ({ ...prev, [selectedClientForService.id]: undefined }));
+            loadClientServices(selectedClientForService.id);
+            loadClients();
+          }}
+          isLight={isLight}
+        />
       )}
     </div>
   );
@@ -510,6 +531,155 @@ function ClientModal({ isOpen, onClose, client, onSuccess, isLight }) {
               className="flex-1 py-2 rounded-lg font-medium bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50"
             >
               {submitting ? 'Saving...' : (client ? 'Update Client' : 'Add Client')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Add Service Modal Component
+function AddServiceModal({ isOpen, onClose, client, onSuccess, isLight }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    status: 'active',
+    resource_count: 0,
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
+
+    try {
+      await servicesAPI.create({
+        ...formData,
+        client_id: client.id,
+        customer_name: client.name,
+        customer_type: 'existing',
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to create service');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className={`relative w-full max-w-lg rounded-2xl ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
+        <div className={`p-6 border-b ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className={`text-xl font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>
+                Add Service
+              </h2>
+              <p className={`text-sm mt-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                For client: {client.name}
+              </p>
+            </div>
+            <button onClick={onClose}>
+              <X className={`w-5 h-5 ${isLight ? 'text-gray-500' : 'text-slate-400'}`} />
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+              Service Name *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g., Website Development, Cloud Migration"
+              className={`w-full px-3 py-2 rounded-lg border ${
+                isLight ? 'bg-white border-gray-200' : 'bg-slate-800 border-slate-700 text-white'
+              }`}
+            />
+          </div>
+
+          <div>
+            <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+              Description
+            </label>
+            <textarea
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Brief description of the service..."
+              className={`w-full px-3 py-2 rounded-lg border ${
+                isLight ? 'bg-white border-gray-200' : 'bg-slate-800 border-slate-700 text-white'
+              }`}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                className={`w-full px-3 py-2 rounded-lg border ${
+                  isLight ? 'bg-white border-gray-200' : 'bg-slate-800 border-slate-700 text-white'
+                }`}
+              >
+                <option value="draft">Draft</option>
+                <option value="active">Active</option>
+                <option value="on_hold">On Hold</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                Resource Count
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.resource_count}
+                onChange={(e) => setFormData({ ...formData, resource_count: parseInt(e.target.value) || 0 })}
+                className={`w-full px-3 py-2 rounded-lg border ${
+                  isLight ? 'bg-white border-gray-200' : 'bg-slate-800 border-slate-700 text-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`flex-1 py-2 rounded-lg font-medium ${
+                isLight ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-slate-700 text-white hover:bg-slate-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 py-2 rounded-lg font-medium bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50"
+            >
+              {submitting ? 'Creating...' : 'Create Service'}
             </button>
           </div>
         </form>

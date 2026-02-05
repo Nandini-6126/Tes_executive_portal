@@ -10,12 +10,10 @@ import { useSettings } from '../../context/SettingsContext';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { type: 'divider', label: 'Business' },
   { path: '/clients', label: 'Clients', icon: Building2, permission: 'services.read' },
-  { path: '/inquiries', label: 'Inquiries', icon: FileText, permission: 'services.read', badge: 'Pipeline' },
-  { type: 'divider', label: 'Operations' },
   { path: '/employees', label: 'Employees', icon: Users, permission: 'services.read' },
   { path: '/task-pilot', label: 'Task Pilot', icon: Zap, permission: 'services.read', badge: 'AI' },
+  { path: '/inquiries', label: 'Inquiries', icon: FileText, permission: 'services.read' },
   { path: '/inventory', label: 'Inventory', icon: Boxes, permission: 'services.read' },
 ];
 
@@ -111,18 +109,8 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* Navigation */}
       <nav className="flex-1 py-6 overflow-y-auto">
         <div className="space-y-1">
-          {navItems.map((item, idx) => (
-            item.type === 'divider' ? (
-              !collapsed && (
-                <div key={`divider-${idx}`} className={`px-6 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-wider ${
-                  isLight ? 'text-slate-400' : 'text-slate-600'
-                }`}>
-                  {item.label}
-                </div>
-              )
-            ) : (
-              <NavItem key={item.path} item={item} />
-            )
+          {navItems.map((item) => (
+            <NavItem key={item.path} item={item} />
           ))}
         </div>
 

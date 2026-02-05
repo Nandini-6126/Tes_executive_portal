@@ -251,10 +251,10 @@ export default function TaskPilotPage() {
                 No Services Yet
               </h3>
               <p className={`mb-4 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-                Create a service first to start managing tasks.
+                First add a client and create services under it. Then you can manage tasks here.
               </p>
-              <Button variant="primary" onClick={() => window.location.href = '/services'}>
-                Go to Services
+              <Button variant="primary" onClick={() => window.location.href = '/clients'}>
+                Go to Clients
               </Button>
             </div>
           )}

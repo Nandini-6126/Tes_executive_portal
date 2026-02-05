@@ -325,17 +325,9 @@ export default function EmployeesPage() {
           <h3 className={`text-xl font-medium mb-2 ${isLight ? 'text-gray-800' : 'text-white'}`}>
             No employees yet
           </h3>
-          <p className={`mb-6 max-w-md mx-auto ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-            Add employees manually or import from an Excel/CSV file.
+          <p className={`max-w-md mx-auto ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            Use the buttons above to add employees manually or import from an Excel/CSV file.
           </p>
-          <div className="flex gap-3 justify-center">
-            <Button variant="secondary" onClick={() => setShowImportModal(true)} leftIcon={<Upload className="w-4 h-4" />}>
-              Import from File
-            </Button>
-            <Button variant="primary" onClick={() => setShowAddModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
-              Add Manually
-            </Button>
-          </div>
         </div>
       )}
 
