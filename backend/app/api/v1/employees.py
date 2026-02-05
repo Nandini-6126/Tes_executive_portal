@@ -292,6 +292,48 @@ async def delete_employee(
     return None
 
 
+def normalize_column_name(col: str) -> str:
+    """Normalize column names to expected format."""
+    col_lower = col.lower().strip().replace(' ', '_').replace('-', '_')
+    
+    # Map common variations to standard names
+    mappings = {
+        'firstname': 'first_name',
+        'first': 'first_name',
+        'fname': 'first_name',
+        'lastname': 'last_name',
+        'last': 'last_name',
+        'lname': 'last_name',
+        'surname': 'last_name',
+        'email_address': 'email',
+        'e_mail': 'email',
+        'emailaddress': 'email',
+        'mail': 'email',
+        'phone_number': 'phone',
+        'phonenumber': 'phone',
+        'mobile': 'phone',
+        'telephone': 'phone',
+        'tel': 'phone',
+        'job': 'job_title',
+        'title': 'job_title',
+        'position': 'job_title',
+        'role': 'job_title',
+        'jobtitle': 'job_title',
+        'dept': 'department',
+        'team': 'department',
+        'emp_id': 'employee_id',
+        'empid': 'employee_id',
+        'employeeid': 'employee_id',
+        'id': 'employee_id',
+        'skill': 'skills',
+        'expertise': 'skills',
+        'technologies': 'skills',
+        'tech': 'skills',
+    }
+    
+    return mappings.get(col_lower, col_lower)
+
+
 @router.post("/bulk-import", response_model=EmployeeBulkImportResult)
 async def bulk_import_employees(
     file: UploadFile = File(...),
@@ -300,7 +342,10 @@ async def bulk_import_employees(
 ):
     """
     Bulk import employees from Excel/CSV file.
-    Expected columns: first_name, last_name, email, phone, job_title, department, skills (comma-separated)
+    Expected columns: first_name, last_name, email (required)
+    Optional: phone, job_title, department, employee_id, skills (comma-separated)
+    
+    Accepts common variations like: First Name, FirstName, Email Address, etc.
     """
     # Validate file type
     if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
@@ -319,13 +364,16 @@ async def bulk_import_employees(
         else:
             df = pd.read_excel(io.BytesIO(content))
         
+        # Normalize column names
+        df.columns = [normalize_column_name(col) for col in df.columns]
+        
         # Validate required columns
         required_columns = ['first_name', 'last_name', 'email']
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Missing required columns: {', '.join(missing_columns)}"
+                detail=f"Missing required columns: {', '.join(missing_columns)}. Your file has columns: {', '.join(df.columns.tolist())}"
             )
         
         success_count = 0
