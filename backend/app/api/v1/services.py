@@ -44,6 +44,8 @@ def service_to_response(service: Service, include_cti: bool = False):
         "name": service.name,
         "description": service.description,
         "notes": service.notes,
+        "client_id": service.client_id,
+        "client_name": service.client.name if service.client else None,
         "customer_name": service.customer_name,
         "customer_type": service.customer_type.value,
         "customer_contact": service.customer_contact,

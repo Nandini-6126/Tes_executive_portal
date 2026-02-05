@@ -50,6 +50,7 @@ class ServiceService:
                 name=data.name,
                 description=data.description,
                 notes=data.notes,
+                client_id=data.client_id,  # Link to client
                 customer_name=data.customer_name,
                 customer_type=CustomerType(data.customer_type.value) if data.customer_type else CustomerType.NEW,
                 customer_contact=data.customer_contact,
