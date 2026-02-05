@@ -386,10 +386,10 @@ function InquiryModal({ isOpen, onClose, inquiry, onSuccess, isLight }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative w-full max-w-2xl rounded-2xl max-h-[90vh] overflow-y-auto ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
-        <div className={`sticky top-0 p-6 border-b ${isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-700'}`}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className={`relative w-full max-w-2xl rounded-2xl my-8 ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
+        <div className={`sticky top-0 p-6 border-b rounded-t-2xl z-10 ${isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-700'}`}>
           <div className="flex items-center justify-between">
             <h2 className={`text-xl font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>
               {inquiry ? 'Edit Inquiry' : 'New Client Inquiry'}

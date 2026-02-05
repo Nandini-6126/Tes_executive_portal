@@ -483,8 +483,8 @@ export default function InventoryPage() {
 
       {/* Smart Analysis Modal */}
       {showAIAnalysis && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl ${
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className={`w-full max-w-4xl rounded-2xl my-8 ${
             isLightTheme ? 'bg-white' : 'bg-gray-800'
           }`}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -843,11 +843,11 @@ function NewRequestModal({ isOpen, onClose, services, onSuccess, isLightTheme })
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className={`w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl ${
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+      <div className={`w-full max-w-3xl rounded-2xl my-8 ${
         isLightTheme ? 'bg-white' : 'bg-gray-800'
       }`}>
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 rounded-t-2xl z-10" style={{ backgroundColor: 'inherit' }}>
           <h2 className={`text-xl font-semibold ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
             New Inventory Request
           </h2>
