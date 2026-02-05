@@ -69,7 +69,11 @@ export const authAPI = {
 // Services API
 export const servicesAPI = {
   filter: (filters) => client.post('/services/filter', filters),
-  getAll: () => client.post('/services/filter', { page: 1, page_size: 1000 }),
+  getAll: (params = {}) => client.post('/services/filter', { 
+    page: params.page || 1, 
+    page_size: params.page_size || 1000,
+    ...params 
+  }),
   getList: () => client.get('/services/list'),  // Simple list for dropdowns
   getById: (id) => client.get(`/services/${id}`),
   create: (data) => client.post('/services', data),
@@ -122,6 +126,66 @@ export const aiAPI = {
   riskAnalysis: () => client.get('/ai/risk-analysis'),
   suggestions: () => client.get('/ai/suggestions'),
   status: () => client.get('/ai/status'),
+};
+
+// Dashboard API
+export const dashboardAPI = {
+  getAnalytics: () => client.get('/dashboard/analytics'),
+  getSummary: () => client.get('/dashboard/summary'),
+};
+
+// Inquiries API
+export const inquiriesAPI = {
+  getAll: (params) => client.get('/inquiries', { params }),
+  getById: (id) => client.get(`/inquiries/${id}`),
+  create: (data) => client.post('/inquiries', data),
+  update: (id, data) => client.put(`/inquiries/${id}`, data),
+  delete: (id) => client.delete(`/inquiries/${id}`),
+  getStats: () => client.get('/inquiries/stats'),
+  addActivity: (id, data) => client.post(`/inquiries/${id}/activities`, data),
+  convert: (id, data) => client.post(`/inquiries/${id}/convert`, data),
+};
+
+// Clients API
+export const clientsAPI = {
+  getAll: (params) => client.get('/clients', { params }),
+  getById: (id) => client.get(`/clients/${id}`),
+  create: (data) => client.post('/clients', data),
+  update: (id, data) => client.put(`/clients/${id}`, data),
+  delete: (id) => client.delete(`/clients/${id}`),
+  getServices: (id) => client.get(`/clients/${id}/services`),
+};
+
+// Employees API
+export const employeesAPI = {
+  getAll: (params) => client.get('/employees', { params }),
+  getById: (id) => client.get(`/employees/${id}`),
+  create: (data) => client.post('/employees', data),
+  update: (id, data) => client.put(`/employees/${id}`, data),
+  delete: (id) => client.delete(`/employees/${id}`),
+  bulkImport: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return client.post('/employees/bulk-import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  getSkills: () => client.get('/employees/skills/all'),
+  createSkill: (data) => client.post('/employees/skills', data),
+};
+
+// Tasks API
+export const tasksAPI = {
+  getAll: (params) => client.get('/tasks', { params }),
+  getById: (id) => client.get(`/tasks/${id}`),
+  create: (data) => client.post('/tasks', data),
+  update: (id, data) => client.put(`/tasks/${id}`, data),
+  delete: (id) => client.delete(`/tasks/${id}`),
+  assign: (taskId, data) => client.post(`/tasks/${taskId}/assign`, data),
+  // AI endpoints
+  generateTasks: (data) => client.post('/tasks/ai/generate', data),
+  generateAndSaveTasks: (data) => client.post('/tasks/ai/generate-and-save', data),
+  recommendEmployees: (data) => client.post('/tasks/ai/recommend-employees', data),
 };
 
 // Inventory API

@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, Briefcase, Package, Settings, 
-  ChevronDown, Shield, Users, UserPlus, Boxes, 
-  ChevronLeft, ChevronRight, Zap
+  LayoutDashboard, Building2, Package, Settings, 
+  ChevronDown, Shield, Users, Boxes, 
+  ChevronLeft, ChevronRight, Zap, BarChart3, FileText
 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useSettings } from '../../context/SettingsContext';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/services', label: 'Services', icon: Briefcase, permission: 'services.read' },
-  { path: '/products', label: 'Products', icon: Package, permission: 'products.read' },
-  { path: '/new-customers', label: 'New Customers', icon: UserPlus, permission: 'services.read' },
+  { path: '/clients', label: 'Clients', icon: Building2, permission: 'services.read' },
+  { path: '/employees', label: 'Employees', icon: Users, permission: 'services.read' },
+  { path: '/task-pilot', label: 'Task Pilot', icon: Zap, permission: 'services.read', badge: 'AI' },
+  { path: '/inquiries', label: 'Inquiries', icon: FileText, permission: 'services.read' },
   { path: '/inventory', label: 'Inventory', icon: Boxes, permission: 'services.read' },
-  { path: '/task-pilot', label: 'Task Pilot', icon: Zap, permission: 'services.read' },
 ];
 
 const adminItems = [
@@ -55,7 +55,12 @@ export default function Sidebar({ collapsed, onToggle }) {
         {!collapsed && (
           <>
             <span className="truncate">{item.label}</span>
-            {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500 shadow-lg shadow-primary-500/50" />}
+            {item.badge && (
+              <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                {item.badge}
+              </span>
+            )}
+            {isActive && !item.badge && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500 shadow-lg shadow-primary-500/50" />}
           </>
         )}
       </NavLink>
@@ -104,7 +109,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* Navigation */}
       <nav className="flex-1 py-6 overflow-y-auto">
         <div className="space-y-1">
-          {navItems.map(item => (
+          {navItems.map((item) => (
             <NavItem key={item.path} item={item} />
           ))}
         </div>

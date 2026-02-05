@@ -14,7 +14,11 @@ from app.models.master_data import (
     Department,
 )
 from app.models.audit import AuditLog, AuditAction, AuditModule
+from app.models.client import Client
 from app.models.service import Service, Project, ServiceStatus, ProjectStatus, CustomerType
+from app.models.employee import Employee, Skill, AvailabilityStatus, SkillProficiency, employee_skills
+from app.models.task import Task, TaskAssignment, TaskStatus, TaskPriority
+from app.models.inquiry import ClientInquiry, InquiryActivity, InquiryStatus, InquiryPriority, InquirySource
 from app.models.inventory import (
     Vendor, Component, ComponentVendor, BOM, BOMItem,
     InventoryRequest, RequestItem, RequestApproval, InventoryTransaction,
@@ -42,12 +46,31 @@ __all__ = [
     "AuditLog",
     "AuditAction",
     "AuditModule",
+    # Client
+    "Client",
     # Services
     "Service",
     "Project",
     "ServiceStatus",
     "ProjectStatus",
     "CustomerType",
+    # Employee & Skills
+    "Employee",
+    "Skill",
+    "AvailabilityStatus",
+    "SkillProficiency",
+    "employee_skills",
+    # Tasks
+    "Task",
+    "TaskAssignment",
+    "TaskStatus",
+    "TaskPriority",
+    # Inquiries
+    "ClientInquiry",
+    "InquiryActivity",
+    "InquiryStatus",
+    "InquiryPriority",
+    "InquirySource",
     # Inventory
     "Vendor",
     "Component",

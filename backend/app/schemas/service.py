@@ -72,6 +72,7 @@ class ServiceBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     notes: Optional[str] = None
+    client_id: Optional[int] = None  # Link to Client
     customer_name: str = Field(..., min_length=1, max_length=255)
     customer_type: CustomerTypeEnum = CustomerTypeEnum.NEW
     customer_contact: Optional[str] = None
@@ -106,6 +107,7 @@ class ServiceUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     notes: Optional[str] = None
+    client_id: Optional[int] = None
     customer_name: Optional[str] = Field(None, min_length=1, max_length=255)
     customer_type: Optional[CustomerTypeEnum] = None
     customer_contact: Optional[str] = None
@@ -142,6 +144,7 @@ class ServiceResponse(ServiceBase):
     technology_ids: List[int] = []
     
     # Related data names (for display)
+    client_name: Optional[str] = None
     engagement_model_name: Optional[str] = None
     service_category_name: Optional[str] = None
     sector_name: Optional[str] = None

@@ -144,6 +144,62 @@ def seed_departments(db: Session) -> dict:
     return departments
 
 
+def seed_skills(db: Session) -> None:
+    """Create initial skills for employees."""
+    print("Seeding skills...")
+    
+    from app.models.employee import Skill
+    
+    skills_data = [
+        # Technical Skills
+        ("Python", "Technical"),
+        ("JavaScript", "Technical"),
+        ("TypeScript", "Technical"),
+        ("React", "Technical"),
+        ("Node.js", "Technical"),
+        ("Java", "Technical"),
+        ("SQL", "Technical"),
+        ("PostgreSQL", "Technical"),
+        ("MongoDB", "Technical"),
+        ("AWS", "Technical"),
+        ("Azure", "Technical"),
+        ("Docker", "Technical"),
+        ("Kubernetes", "Technical"),
+        ("Git", "Technical"),
+        ("REST API", "Technical"),
+        ("GraphQL", "Technical"),
+        ("Machine Learning", "Technical"),
+        ("Data Analysis", "Technical"),
+        # Soft Skills
+        ("Project Management", "Soft"),
+        ("Communication", "Soft"),
+        ("Leadership", "Soft"),
+        ("Problem Solving", "Soft"),
+        ("Teamwork", "Soft"),
+        ("Time Management", "Soft"),
+        # Domain Skills
+        ("Requirements Analysis", "Domain"),
+        ("System Design", "Domain"),
+        ("Architecture", "Domain"),
+        ("Testing", "Domain"),
+        ("QA", "Domain"),
+        ("DevOps", "Domain"),
+        ("Documentation", "Domain"),
+        ("Agile", "Domain"),
+        ("Scrum", "Domain"),
+    ]
+    
+    created_count = 0
+    for name, category in skills_data:
+        if not db.query(Skill).filter(Skill.name == name).first():
+            skill = Skill(name=name, category=category, is_active=True)
+            db.add(skill)
+            created_count += 1
+    
+    db.commit()
+    print(f"✓ {created_count} skills created")
+
+
 def seed_master_data(db: Session) -> None:
     """Create initial master data entries."""
     print("Seeding master data...")
@@ -401,9 +457,14 @@ def print_credentials():
 
 
 def main():
-    """Run the seed script."""
+    """Run the seed script.
+    
+    BASE VERSION: Seeds only essential configuration data (permissions, roles, 
+    departments, master data, and initial users). No demo/dummy services or 
+    inventory data is created - the application starts with a clean slate.
+    """
     print("\n" + "=" * 60)
-    print("TESSOLVE EXECUTIVE PORTAL - DATABASE SEED")
+    print("TESSOLVE EXECUTIVE PORTAL - DATABASE SEED (BASE VERSION)")
     print("=" * 60 + "\n")
     
     db = SessionLocal()
@@ -412,16 +473,22 @@ def main():
         # Create tables
         create_tables(db)
         
-        # Seed data in order
+        # Seed essential configuration data
         permissions = seed_permissions(db)
         roles = seed_roles(db, permissions)
         departments = seed_departments(db)
         seed_master_data(db)
+        seed_skills(db)
         users = seed_users(db, roles, departments)
-        seed_services(db, users)
-        seed_inventory_data(db)
+        
+        # NOTE: Demo/dummy data seeding is disabled for the base version
+        # Uncomment the following lines to seed sample services and inventory:
+        # seed_services(db, users)
+        # seed_inventory_data(db)
         
         print("\n✅ Database seeding completed successfully!")
+        print("\n📋 BASE VERSION: No demo services or inventory data created.")
+        print("   Users can add their own data through the application.")
         print_credentials()
         
     except Exception as e:
