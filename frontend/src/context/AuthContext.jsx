@@ -35,23 +35,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (username, password) => {
-    try {
-      const response = await authAPI.login({ username, password });
-      const { tokens, user: userData } = response.data;
+    const response = await authAPI.login({ username, password });
+    const { tokens, user: userData } = response.data;
 
-      // Store tokens
-      localStorage.setItem('access_token', tokens.access_token);
-      localStorage.setItem('refresh_token', tokens.refresh_token);
-      localStorage.setItem('user', JSON.stringify(userData));
+    // Store tokens
+    localStorage.setItem('access_token', tokens.access_token);
+    localStorage.setItem('refresh_token', tokens.refresh_token);
+    localStorage.setItem('user', JSON.stringify(userData));
 
-      setUser(userData);
-      setIsAuthenticated(true);
+    setUser(userData);
+    setIsAuthenticated(true);
 
-      return { success: true, user: userData };
-    } catch (error) {
-      const message = error.response?.data?.error?.message || 'Login failed';
-      return { success: false, error: message };
-    }
+    return { success: true, user: userData };
   }, []);
 
   const logout = useCallback(async () => {

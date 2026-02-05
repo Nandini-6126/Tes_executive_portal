@@ -1,819 +1,403 @@
 import { useState, useEffect } from 'react';
 import { 
-  Package, Upload, Plus, Search, AlertTriangle, Truck, 
-  FileText, Sparkles, CheckCircle, Clock, X, ChevronRight,
-  Building2, Cpu, Database, Settings, ShoppingCart, BarChart3, RefreshCw
+  Package, Plus, Search, Monitor, HardDrive, Key, AlertCircle,
+  CheckCircle, Clock, XCircle, Sparkles, Edit2, Trash2, Filter
 } from 'lucide-react';
-import { inventoryAPI, servicesAPI } from '../api/client';
+import { inventoryAPI, aiAPI } from '../api/client';
 import { useSettings } from '../context/SettingsContext';
+import Button from '../components/common/Button';
+import Modal, { ModalForm, ModalFooter, ModalError } from '../components/common/Modal';
+import { PageLoader } from '../components/common/LoadingSpinner';
+
+const CATEGORY_ICONS = {
+  hardware: Monitor,
+  software: HardDrive,
+  license: Key,
+};
+
+const CATEGORY_COLORS = {
+  hardware: { bg: 'bg-blue-100 dark:bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400', icon: 'text-blue-500' },
+  software: { bg: 'bg-purple-100 dark:bg-purple-500/20', text: 'text-purple-600 dark:text-purple-400', icon: 'text-purple-500' },
+  license: { bg: 'bg-amber-100 dark:bg-amber-500/20', text: 'text-amber-600 dark:text-amber-400', icon: 'text-amber-500' },
+};
+
+const STATUS_STYLES = {
+  pending: { bg: 'bg-yellow-100 dark:bg-yellow-500/20', text: 'text-yellow-700 dark:text-yellow-400', icon: Clock },
+  approved: { bg: 'bg-green-100 dark:bg-green-500/20', text: 'text-green-700 dark:text-green-400', icon: CheckCircle },
+  rejected: { bg: 'bg-red-100 dark:bg-red-500/20', text: 'text-red-700 dark:text-red-400', icon: XCircle },
+  fulfilled: { bg: 'bg-blue-100 dark:bg-blue-500/20', text: 'text-blue-700 dark:text-blue-400', icon: CheckCircle },
+  cancelled: { bg: 'bg-gray-100 dark:bg-slate-700', text: 'text-gray-700 dark:text-slate-400', icon: XCircle },
+};
+
+const PRIORITY_STYLES = {
+  low: { bg: 'bg-gray-100 dark:bg-slate-700', text: 'text-gray-600 dark:text-slate-400' },
+  medium: { bg: 'bg-blue-100 dark:bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400' },
+  high: { bg: 'bg-orange-100 dark:bg-orange-500/20', text: 'text-orange-600 dark:text-orange-400' },
+  urgent: { bg: 'bg-red-100 dark:bg-red-500/20', text: 'text-red-600 dark:text-red-400' },
+};
 
 export default function InventoryPage() {
   const { isLightTheme } = useSettings();
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const isLight = isLightTheme;
   
-  // Dashboard data
-  const [dashboardData, setDashboardData] = useState(null);
-  
-  // Components
-  const [components, setComponents] = useState([]);
-  const [vendors, setVendors] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [services, setServices] = useState([]);
-  const [servicesLoading, setServicesLoading] = useState(false);
-  
-  // Modals
-  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
-  const [showNewRequest, setShowNewRequest] = useState(false);
-  
-  // Smart Analysis
-  const [selectedService, setSelectedService] = useState('');
-  const [additionalRequirements, setAdditionalRequirements] = useState('');
-  const [analysisResult, setAnalysisResult] = useState(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [editingRequest, setEditingRequest] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
-    loadDashboard();
-    loadServices();
+    loadRequests();
   }, []);
 
-  useEffect(() => {
-    if (activeTab === 'components') loadComponents();
-    if (activeTab === 'vendors') loadVendors();
-    if (activeTab === 'requests') loadRequests();
-  }, [activeTab]);
-
-  // Reload services when modals open to get latest data
-  useEffect(() => {
-    if (showAIAnalysis || showNewRequest) {
-      loadServices();
-    }
-  }, [showAIAnalysis, showNewRequest]);
-
-  const loadDashboard = async () => {
-    try {
-      const response = await inventoryAPI.getDashboard();
-      setDashboardData(response.data);
-    } catch (err) {
-      console.error('Failed to load dashboard:', err);
-      // Set default data if API fails
-      setDashboardData({
-        total_components: 0,
-        low_stock_alerts: 0,
-        total_vendors: 0,
-        pending_requests: 0
-      });
-    }
-  };
-
-  const loadComponents = async () => {
-    setLoading(true);
-    try {
-      const response = await inventoryAPI.getComponents();
-      setComponents(response.data || []);
-    } catch (err) {
-      setError('Failed to load components');
-      setComponents([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadVendors = async () => {
-    setLoading(true);
-    try {
-      const response = await inventoryAPI.getVendors();
-      setVendors(response.data || []);
-    } catch (err) {
-      setError('Failed to load vendors');
-      setVendors([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const loadRequests = async () => {
-    setLoading(true);
+    setIsLoading(true);
     try {
-      const response = await inventoryAPI.getRequests();
-      setRequests(response.data || []);
+      const response = await inventoryAPI.getAll({ page: 1, page_size: 100 });
+      setRequests(response.data.data || []);
     } catch (err) {
-      setError('Failed to load requests');
+      console.error('Failed to load requests:', err);
       setRequests([]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const loadServices = async () => {
-    setServicesLoading(true);
-    console.log('Loading services...');
-    
-    // Try both endpoints and use whichever works
-    let servicesData = [];
-    
-    // First try the /filter endpoint (POST) which we know works
+  const handleDeleteRequest = async (id) => {
     try {
-      const response = await servicesAPI.filter({ page: 1, page_size: 1000 });
-      console.log('Services from /filter:', response);
-      if (response.data?.data && Array.isArray(response.data.data)) {
-        servicesData = response.data.data;
-        console.log('Got services from filter:', servicesData.length);
-      }
+      await inventoryAPI.delete(id);
+      setDeleteConfirm(null);
+      loadRequests();
     } catch (err) {
-      console.error('Filter endpoint failed:', err.message);
-    }
-    
-    // If filter didn't work, try /list endpoint
-    if (servicesData.length === 0) {
-      try {
-        const response = await servicesAPI.getList();
-        console.log('Services from /list:', response);
-        if (response.data && Array.isArray(response.data)) {
-          servicesData = response.data;
-          console.log('Got services from list:', servicesData.length);
-        }
-      } catch (err) {
-        console.error('List endpoint failed:', err.message);
-      }
-    }
-    
-    setServices(servicesData);
-    setServicesLoading(false);
-    console.log('Final services state:', servicesData.length, 'services');
-  };
-
-  const handleAIAnalysis = async () => {
-    if (!selectedService) {
-      setError('Please select a service');
-      return;
-    }
-    
-    setAnalyzing(true);
-    setError('');
-    setAnalysisResult(null);
-    
-    try {
-      const response = await inventoryAPI.analyzeService({
-        service_id: parseInt(selectedService),
-        requirements: additionalRequirements
-      });
-      
-      if (response.data.success) {
-        setAnalysisResult(response.data.analysis);
-      } else {
-        setError('Analysis failed');
-      }
-    } catch (err) {
-      setError(err.response?.data?.detail || 'AI analysis failed. Make sure ANTHROPIC_API_KEY is configured.');
-    } finally {
-      setAnalyzing(false);
+      console.error('Failed to delete request:', err);
+      alert('Failed to delete request');
     }
   };
 
-  const handleGenerateBOM = async () => {
-    if (!selectedService) return;
-    
-    setAnalyzing(true);
-    try {
-      const response = await inventoryAPI.generateBOM(
-        parseInt(selectedService),
-        additionalRequirements
-      );
-      
-      if (response.data.success) {
-        alert(`BOM created successfully! ${response.data.items_created} items added.`);
-        setShowAIAnalysis(false);
-        setAnalysisResult(null);
-      }
-    } catch (err) {
-      setError('Failed to generate BOM');
-    } finally {
-      setAnalyzing(false);
-    }
+  const filteredRequests = requests.filter(req => {
+    const matchesSearch = req.item_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !filterCategory || req.category === filterCategory;
+    const matchesStatus = !filterStatus || req.status === filterStatus;
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
+  const stats = {
+    total: requests.length,
+    pending: requests.filter(r => r.status === 'pending').length,
+    approved: requests.filter(r => r.status === 'approved').length,
+    hardware: requests.filter(r => r.category === 'hardware').length,
+    software: requests.filter(r => r.category === 'software').length,
+    license: requests.filter(r => r.category === 'license').length,
   };
 
-  const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'components', label: 'Components', icon: Cpu },
-    { id: 'vendors', label: 'Vendors', icon: Building2 },
-    { id: 'requests', label: 'Requests', icon: ShoppingCart },
-  ];
-
-  const getStatusColor = (status) => {
-    const colors = {
-      draft: 'bg-gray-100 text-gray-700',
-      pending_approval: 'bg-yellow-100 text-yellow-700',
-      manager_approved: 'bg-blue-100 text-blue-700',
-      dept_head_approved: 'bg-green-100 text-green-700',
-      rejected: 'bg-red-100 text-red-700',
-      ordered: 'bg-purple-100 text-purple-700',
-      delivered: 'bg-green-100 text-green-700',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-700';
-  };
+  if (isLoading) {
+    return <PageLoader text="Loading inventory requests..." />;
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className={`text-2xl font-bold ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-            Inventory Management
+          <h1 className={`text-2xl font-bold flex items-center gap-3 ${isLight ? 'text-gray-800' : 'text-white'}`}>
+            <Package className="w-7 h-7 text-primary-500" />
+            Inventory Requests
           </h1>
-          <p className={`mt-1 ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>
-            Manage components, vendors, and procurement with AI assistance
+          <p className={`mt-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            Manage hardware, software, and license requests
           </p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowAIAnalysis(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:opacity-90"
+        <div className="flex gap-2">
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowAIModal(true)} 
+            leftIcon={<Sparkles className="w-4 h-4" />}
           >
-            <Sparkles className="w-4 h-4" />
-            Smart Analysis
-          </button>
-          <button
-            onClick={() => setShowNewRequest(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            AI Analysis
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={() => setShowRequestModal(true)} 
+            leftIcon={<Plus className="w-4 h-4" />}
           >
-            <Plus className="w-4 h-4" />
             New Request
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className={`flex gap-1 p-1 rounded-lg ${isLightTheme ? 'bg-gray-100' : 'bg-gray-800'}`}>
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              activeTab === tab.id
-                ? 'bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400'
-                : isLightTheme ? 'text-gray-600 hover:text-gray-900' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-          </button>
-        ))}
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <StatCard label="Total" value={stats.total} isLight={isLight} />
+        <StatCard label="Pending" value={stats.pending} color="yellow" isLight={isLight} />
+        <StatCard label="Approved" value={stats.approved} color="green" isLight={isLight} />
+        <StatCard label="Hardware" value={stats.hardware} color="blue" isLight={isLight} />
+        <StatCard label="Software" value={stats.software} color="purple" isLight={isLight} />
+        <StatCard label="Licenses" value={stats.license} color="amber" isLight={isLight} />
       </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError('')}><X className="w-4 h-4" /></button>
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 relative">
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
+          <input
+            type="text"
+            placeholder="Search by item name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`w-full pl-10 pr-4 py-3 rounded-xl border ${
+              isLight 
+                ? 'bg-white border-gray-200 focus:border-primary-500' 
+                : 'bg-slate-800 border-slate-700 text-white focus:border-primary-500'
+            } focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all`}
+          />
         </div>
-      )}
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className={`px-4 py-3 rounded-xl border ${
+            isLight 
+              ? 'bg-white border-gray-200' 
+              : 'bg-slate-800 border-slate-700 text-white'
+          } focus:outline-none focus:ring-2 focus:ring-primary-500/20`}
+        >
+          <option value="">All Categories</option>
+          <option value="hardware">Hardware</option>
+          <option value="software">Software</option>
+          <option value="license">License</option>
+        </select>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className={`px-4 py-3 rounded-xl border ${
+            isLight 
+              ? 'bg-white border-gray-200' 
+              : 'bg-slate-800 border-slate-700 text-white'
+          } focus:outline-none focus:ring-2 focus:ring-primary-500/20`}
+        >
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="fulfilled">Fulfilled</option>
+        </select>
+      </div>
 
-      {/* Dashboard Tab */}
-      {activeTab === 'dashboard' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className={`p-6 rounded-xl ${isLightTheme ? 'bg-white shadow' : 'bg-gray-800'}`}>
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Package className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className={`text-sm ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>Total Components</p>
-                <p className={`text-2xl font-bold ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                  {dashboardData?.total_components || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className={`p-6 rounded-xl ${isLightTheme ? 'bg-white shadow' : 'bg-gray-800'}`}>
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                <AlertTriangle className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p className={`text-sm ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>Low Stock Alerts</p>
-                <p className={`text-2xl font-bold ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                  {dashboardData?.low_stock_alerts || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className={`p-6 rounded-xl ${isLightTheme ? 'bg-white shadow' : 'bg-gray-800'}`}>
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <Building2 className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className={`text-sm ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>Active Vendors</p>
-                <p className={`text-2xl font-bold ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                  {dashboardData?.total_vendors || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className={`p-6 rounded-xl ${isLightTheme ? 'bg-white shadow' : 'bg-gray-800'}`}>
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <Clock className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className={`text-sm ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>Pending Requests</p>
-                <p className={`text-2xl font-bold ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                  {dashboardData?.pending_requests || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className={`col-span-full p-6 rounded-xl ${isLightTheme ? 'bg-white shadow' : 'bg-gray-800'}`}>
-            <h3 className={`font-semibold mb-4 ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-              Quick Actions
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <button
-                onClick={() => setShowAIAnalysis(true)}
-                className={`p-4 rounded-lg text-left transition-colors ${
-                  isLightTheme ? 'bg-purple-50 hover:bg-purple-100' : 'bg-purple-900/20 hover:bg-purple-900/30'
-                }`}
-              >
-                <Sparkles className="w-6 h-6 text-purple-600 mb-2" />
-                <p className={`font-medium ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>Smart Analysis</p>
-                <p className={`text-sm ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>Analyze service requirements</p>
-              </button>
-              <button
-                onClick={() => setShowNewRequest(true)}
-                className={`p-4 rounded-lg text-left transition-colors ${
-                  isLightTheme ? 'bg-blue-50 hover:bg-blue-100' : 'bg-blue-900/20 hover:bg-blue-900/30'
-                }`}
-              >
-                <ShoppingCart className="w-6 h-6 text-blue-600 mb-2" />
-                <p className={`font-medium ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>New Request</p>
-                <p className={`text-sm ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>Create procurement request</p>
-              </button>
-              <button
-                onClick={() => setActiveTab('components')}
-                className={`p-4 rounded-lg text-left transition-colors ${
-                  isLightTheme ? 'bg-green-50 hover:bg-green-100' : 'bg-green-900/20 hover:bg-green-900/30'
-                }`}
-              >
-                <Package className="w-6 h-6 text-green-600 mb-2" />
-                <p className={`font-medium ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>View Inventory</p>
-                <p className={`text-sm ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>Check stock levels</p>
-              </button>
-              <button
-                onClick={() => setActiveTab('vendors')}
-                className={`p-4 rounded-lg text-left transition-colors ${
-                  isLightTheme ? 'bg-orange-50 hover:bg-orange-100' : 'bg-orange-900/20 hover:bg-orange-900/30'
-                }`}
-              >
-                <Building2 className="w-6 h-6 text-orange-600 mb-2" />
-                <p className={`font-medium ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>Manage Vendors</p>
-                <p className={`text-sm ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>View supplier info</p>
-              </button>
-            </div>
-          </div>
+      {/* Requests Grid */}
+      {filteredRequests.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredRequests.map((request) => (
+            <RequestCard
+              key={request.id}
+              request={request}
+              isLight={isLight}
+              onEdit={() => { setEditingRequest(request); setShowRequestModal(true); }}
+              onDelete={() => setDeleteConfirm(request)}
+            />
+          ))}
         </div>
-      )}
-
-      {/* Components Tab */}
-      {activeTab === 'components' && (
-        <div className={`rounded-xl overflow-hidden ${isLightTheme ? 'bg-white shadow' : 'bg-gray-800'}`}>
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search components..."
-                  className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
-                    isLightTheme 
-                      ? 'border-gray-300 bg-white' 
-                      : 'border-gray-600 bg-gray-700 text-white'
-                  }`}
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-8 text-center">
-            <Package className={`w-12 h-12 mx-auto mb-4 ${isLightTheme ? 'text-gray-400' : 'text-gray-600'}`} />
-            <p className={`font-medium ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>No Components Yet</p>
-            <p className={`text-sm mt-1 ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>
-              Components will be added when you create inventory requests or import BOMs.
-            </p>
-            <button
-              onClick={() => setShowAIAnalysis(true)}
-              className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            >
-              <Sparkles className="w-4 h-4 inline mr-2" />
-              Use AI to Analyze Requirements
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Vendors Tab */}
-      {activeTab === 'vendors' && (
-        <div className={`rounded-xl p-8 text-center ${isLightTheme ? 'bg-white shadow' : 'bg-gray-800'}`}>
-          <Building2 className={`w-12 h-12 mx-auto mb-4 ${isLightTheme ? 'text-gray-400' : 'text-gray-600'}`} />
-          <p className={`font-medium ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>No Vendors Yet</p>
-          <p className={`text-sm mt-1 ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>
-            Add vendors to start managing your supplier relationships.
+      ) : (
+        <div className={`p-12 text-center rounded-xl ${
+          isLight ? 'bg-white shadow-sm border border-gray-100' : 'bg-slate-800/50 border border-slate-700/50'
+        }`}>
+          <Package className={`w-16 h-16 mx-auto mb-4 ${isLight ? 'text-gray-300' : 'text-slate-600'}`} />
+          <h3 className={`text-xl font-semibold mb-2 ${isLight ? 'text-gray-800' : 'text-white'}`}>
+            {searchQuery || filterCategory || filterStatus ? 'No requests found' : 'No requests yet'}
+          </h3>
+          <p className={`max-w-md mx-auto mb-6 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            {searchQuery || filterCategory || filterStatus 
+              ? 'Try adjusting your filters.'
+              : 'Start by creating a new hardware, software, or license request.'
+            }
           </p>
-          <p className={`text-xs mt-4 ${isLightTheme ? 'text-gray-500' : 'text-gray-500'}`}>
-            AI will suggest vendors when analyzing service requirements.
-          </p>
-        </div>
-      )}
-
-      {/* Requests Tab */}
-      {activeTab === 'requests' && (
-        <div className="space-y-4">
-          {requests.length === 0 ? (
-            <div className={`text-center py-12 rounded-xl ${isLightTheme ? 'bg-white shadow' : 'bg-gray-800'}`}>
-              <ShoppingCart className={`w-12 h-12 mx-auto mb-4 ${isLightTheme ? 'text-gray-400' : 'text-gray-600'}`} />
-              <p className={`font-medium ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>No Inventory Requests Yet</p>
-              <p className={`text-sm mt-1 ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>
-                Create a new request to start the procurement process.
-              </p>
-              <button
-                onClick={() => setShowNewRequest(true)}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4 inline mr-2" />
-                Create First Request
-              </button>
-            </div>
-          ) : (
-            requests.map((request) => (
-              <div key={request.id} className={`p-6 rounded-xl ${isLightTheme ? 'bg-white shadow' : 'bg-gray-800'}`}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h3 className={`font-semibold ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                        {request.title}
-                      </h3>
-                      <span className={`px-2 py-1 rounded text-xs ${getStatusColor(request.status)}`}>
-                        {request.status?.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                    <p className={`text-sm mt-1 ${isLightTheme ? 'text-gray-500' : 'text-gray-400'}`}>
-                      {request.request_number} • Requested by {request.requested_by_name}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-semibold ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                      ${request.total_amount?.toFixed(2) || '0.00'}
-                    </p>
-                    <p className={`text-sm ${isLightTheme ? 'text-gray-500' : 'text-gray-400'}`}>
-                      {request.items?.length || 0} items
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))
+          {!searchQuery && !filterCategory && !filterStatus && (
+            <Button variant="primary" onClick={() => setShowRequestModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
+              Create First Request
+            </Button>
           )}
         </div>
       )}
 
-      {/* Smart Analysis Modal */}
-      {showAIAnalysis && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className={`w-full max-w-4xl rounded-2xl my-8 ${
-            isLightTheme ? 'bg-white' : 'bg-gray-800'
-          }`}>
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className={`text-xl font-semibold ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                    Smart Requirements Analysis
-                  </h2>
-                  <p className={`text-sm ${isLightTheme ? 'text-gray-500' : 'text-gray-400'}`}>
-                    Analyze service requirements and generate component recommendations
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => { setShowAIAnalysis(false); setAnalysisResult(null); }}>
-                <X className={`w-5 h-5 ${isLightTheme ? 'text-gray-500' : 'text-gray-400'}`} />
-              </button>
-            </div>
+      {/* Request Modal */}
+      <RequestModal
+        isOpen={showRequestModal}
+        onClose={() => { setShowRequestModal(false); setEditingRequest(null); }}
+        request={editingRequest}
+        onSuccess={() => {
+          setShowRequestModal(false);
+          setEditingRequest(null);
+          loadRequests();
+        }}
+      />
 
-            <div className="p-6 space-y-6">
-              {/* Service Selection */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className={`text-sm font-medium ${isLightTheme ? 'text-gray-700' : 'text-gray-300'}`}>
-                    Select Service *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={loadServices}
-                    disabled={servicesLoading}
-                    className={`text-sm flex items-center gap-1 ${isLightTheme ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'}`}
-                  >
-                    <RefreshCw className={`w-3 h-3 ${servicesLoading ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </button>
-                </div>
-                <select
-                  value={selectedService}
-                  onChange={(e) => setSelectedService(e.target.value)}
-                  disabled={servicesLoading}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isLightTheme 
-                      ? 'border-gray-300 bg-white text-gray-800' 
-                      : 'border-gray-600 bg-gray-700 text-white'
-                  } ${servicesLoading ? 'opacity-50' : ''}`}
-                >
-                  <option value="">
-                    {servicesLoading ? 'Loading services...' : 'Choose a service...'}
-                  </option>
-                  {!servicesLoading && services && services.length > 0 && (
-                    services.map((svc) => (
-                      <option key={svc.id} value={svc.id}>
-                        {svc.name} {svc.customer_name ? `- ${svc.customer_name}` : ''} {svc.status ? `(${svc.status})` : ''}
-                      </option>
-                    ))
-                  )}
-                </select>
-                {!servicesLoading && services && services.length === 0 && (
-                  <p className="text-sm text-orange-500 mt-2">
-                    No services found. Please go to the Services page and add a service first, then come back here.
-                  </p>
-                )}
-                {!servicesLoading && services && services.length > 0 && (
-                  <p className={`text-xs mt-1 ${isLightTheme ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {services.length} service(s) available
-                  </p>
-                )}
-              </div>
+      {/* AI Analysis Modal */}
+      <AIAnalysisModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        requests={requests}
+      />
 
-              {/* Additional Requirements */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isLightTheme ? 'text-gray-700' : 'text-gray-300'}`}>
-                  Additional Requirements (Optional)
-                </label>
-                <textarea
-                  value={additionalRequirements}
-                  onChange={(e) => setAdditionalRequirements(e.target.value)}
-                  rows={4}
-                  placeholder="Describe any specific requirements, constraints, or preferences. For example: 'Need 5 developer workstations with high RAM for Java development, 2 test servers, and IDE licenses for the team...'"
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isLightTheme 
-                      ? 'border-gray-300 bg-white text-gray-800' 
-                      : 'border-gray-600 bg-gray-700 text-white'
-                  }`}
-                />
-              </div>
-
-              {/* Analyze Button */}
-              <button
-                onClick={handleAIAnalysis}
-                disabled={analyzing || !selectedService}
-                className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {analyzing ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Analyzing with AI...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Analyze Requirements
-                  </>
-                )}
-              </button>
-
-              {/* Analysis Results */}
-              {analysisResult && (
-                <div className="space-y-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className={`p-4 rounded-lg ${isLightTheme ? 'bg-blue-50' : 'bg-blue-900/20'}`}>
-                    <h3 className={`font-medium mb-2 ${isLightTheme ? 'text-blue-800' : 'text-blue-300'}`}>
-                      Analysis Summary
-                    </h3>
-                    <p className={`text-sm ${isLightTheme ? 'text-blue-700' : 'text-blue-200'}`}>
-                      {analysisResult.analysis_summary}
-                    </p>
-                  </div>
-
-                  {/* Hardware Components */}
-                  {analysisResult.hardware_components?.length > 0 && (
-                    <div>
-                      <h3 className={`font-medium mb-3 flex items-center gap-2 ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                        <Cpu className="w-5 h-5 text-blue-500" />
-                        Hardware Components ({analysisResult.hardware_components.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {analysisResult.hardware_components.map((item, idx) => (
-                          <div key={idx} className={`p-3 rounded-lg ${isLightTheme ? 'bg-gray-50' : 'bg-gray-700'}`}>
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <p className={`font-medium ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                                  {item.name}
-                                </p>
-                                <p className={`text-sm ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>
-                                  {item.description}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <span className={`px-2 py-1 rounded text-xs ${
-                                  item.priority === 'critical' ? 'bg-red-100 text-red-700' :
-                                  item.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {item.priority}
-                                </span>
-                                <p className={`text-sm mt-1 ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>
-                                  Qty: {item.quantity} | ~${item.estimated_unit_price || 'N/A'}
-                                </p>
-                              </div>
-                            </div>
-                            {item.suggested_vendors?.length > 0 && (
-                              <p className={`text-xs mt-2 ${isLightTheme ? 'text-gray-500' : 'text-gray-500'}`}>
-                                💡 Suggested vendors: {item.suggested_vendors.join(', ')}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Software Components */}
-                  {analysisResult.software_components?.length > 0 && (
-                    <div>
-                      <h3 className={`font-medium mb-3 flex items-center gap-2 ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                        <Database className="w-5 h-5 text-purple-500" />
-                        Software Components ({analysisResult.software_components.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {analysisResult.software_components.map((item, idx) => (
-                          <div key={idx} className={`p-3 rounded-lg ${isLightTheme ? 'bg-gray-50' : 'bg-gray-700'}`}>
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <p className={`font-medium ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                                  {item.name}
-                                </p>
-                                <p className={`text-sm ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>
-                                  {item.description}
-                                </p>
-                                {item.license_type && (
-                                  <span className="text-xs text-purple-600">License: {item.license_type}</span>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <span className={`px-2 py-1 rounded text-xs ${
-                                  item.priority === 'critical' ? 'bg-red-100 text-red-700' :
-                                  item.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {item.priority}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Cost Summary */}
-                  <div className={`p-4 rounded-lg ${isLightTheme ? 'bg-green-50' : 'bg-green-900/20'}`}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className={`font-medium ${isLightTheme ? 'text-green-800' : 'text-green-300'}`}>
-                          Estimated Total Cost
-                        </p>
-                        <p className={`text-2xl font-bold ${isLightTheme ? 'text-green-700' : 'text-green-200'}`}>
-                          ${analysisResult.total_estimated_cost?.toLocaleString() || 'N/A'}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-medium ${isLightTheme ? 'text-green-800' : 'text-green-300'}`}>
-                          Procurement Time
-                        </p>
-                        <p className={`text-2xl font-bold ${isLightTheme ? 'text-green-700' : 'text-green-200'}`}>
-                          ~{analysisResult.estimated_procurement_time_days || 'N/A'} days
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recommendations */}
-                  {analysisResult.recommendations?.length > 0 && (
-                    <div>
-                      <h3 className={`font-medium mb-2 ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                        💡 Recommendations
-                      </h3>
-                      <ul className="space-y-1">
-                        {analysisResult.recommendations.map((rec, idx) => (
-                          <li key={idx} className={`text-sm flex items-start gap-2 ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>
-                            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                            {rec}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Risks */}
-                  {analysisResult.risks?.length > 0 && (
-                    <div>
-                      <h3 className={`font-medium mb-2 ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                        ⚠️ Potential Risks
-                      </h3>
-                      <ul className="space-y-1">
-                        {analysisResult.risks.map((risk, idx) => (
-                          <li key={idx} className={`text-sm flex items-start gap-2 ${isLightTheme ? 'text-gray-600' : 'text-gray-400'}`}>
-                            <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                            {risk}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Generate BOM Button */}
-                  <button
-                    onClick={handleGenerateBOM}
-                    disabled={analyzing}
-                    className="w-full py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Generate BOM & Create Request
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+      {/* Delete Confirmation */}
+      <Modal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Delete Request"
+        size="sm"
+      >
+        <div className="p-6">
+          <p className={isLight ? 'text-gray-600' : 'text-slate-400'}>
+            Are you sure you want to delete the request for <strong className={isLight ? 'text-gray-800' : 'text-white'}>"{deleteConfirm?.item_name}"</strong>?
+          </p>
         </div>
-      )}
-
-      {/* New Request Modal */}
-      {showNewRequest && (
-        <NewRequestModal
-          isOpen={showNewRequest}
-          onClose={() => setShowNewRequest(false)}
-          services={services}
-          onSuccess={() => {
-            setShowNewRequest(false);
-            loadRequests();
-            setActiveTab('requests');
-          }}
-          isLightTheme={isLightTheme}
-        />
-      )}
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+          <Button variant="danger" onClick={() => handleDeleteRequest(deleteConfirm?.id)} leftIcon={<Trash2 className="w-4 h-4" />}>
+            Delete
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
 
-// New Request Modal Component
-function NewRequestModal({ isOpen, onClose, services, onSuccess, isLightTheme }) {
+// Stat Card
+function StatCard({ label, value, color, isLight }) {
+  const colorClasses = {
+    yellow: 'text-yellow-600',
+    green: 'text-green-600',
+    blue: 'text-blue-600',
+    purple: 'text-purple-600',
+    amber: 'text-amber-600',
+    default: isLight ? 'text-gray-800' : 'text-white'
+  };
+  
+  return (
+    <div className={`p-4 rounded-xl ${
+      isLight ? 'bg-white shadow-sm border border-gray-100' : 'bg-slate-800/50 border border-slate-700/50'
+    }`}>
+      <p className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>{label}</p>
+      <p className={`text-xl font-bold mt-1 ${colorClasses[color] || colorClasses.default}`}>{value}</p>
+    </div>
+  );
+}
+
+// Request Card
+function RequestCard({ request, isLight, onEdit, onDelete }) {
+  const category = CATEGORY_COLORS[request.category] || CATEGORY_COLORS.hardware;
+  const status = STATUS_STYLES[request.status] || STATUS_STYLES.pending;
+  const priority = PRIORITY_STYLES[request.priority] || PRIORITY_STYLES.medium;
+  const CategoryIcon = CATEGORY_ICONS[request.category] || Package;
+  const StatusIcon = status.icon;
+  
+  return (
+    <div className={`p-5 rounded-xl ${
+      isLight ? 'bg-white shadow-sm border border-gray-100' : 'bg-slate-800/50 border border-slate-700/50'
+    }`}>
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${category.bg}`}>
+            <CategoryIcon className={`w-5 h-5 ${category.icon}`} />
+          </div>
+          <div>
+            <h3 className={`font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>
+              {request.item_name}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${category.bg} ${category.text}`}>
+                {request.category}
+              </span>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${priority.bg} ${priority.text}`}>
+                {request.priority}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onEdit}
+            className={`p-1.5 rounded-lg ${isLight ? 'hover:bg-gray-100 text-gray-500' : 'hover:bg-slate-700 text-slate-400'}`}
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onDelete}
+            className={`p-1.5 rounded-lg ${isLight ? 'hover:bg-red-50 text-gray-500 hover:text-red-500' : 'hover:bg-red-500/10 text-slate-400 hover:text-red-400'}`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {request.description && (
+        <p className={`mt-3 text-sm line-clamp-2 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+          {request.description}
+        </p>
+      )}
+
+      <div className="mt-4 pt-4 border-t flex items-center justify-between" style={{ borderColor: isLight ? '#e5e7eb' : '#374151' }}>
+        <div className="flex items-center gap-2">
+          <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+            Qty: {request.quantity}
+          </span>
+          {request.estimated_cost && (
+            <span className={`text-sm font-medium ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+              ${request.estimated_cost}
+            </span>
+          )}
+        </div>
+        <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
+          <StatusIcon className="w-3.5 h-3.5" />
+          {request.status}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// Request Modal
+function RequestModal({ isOpen, onClose, request, onSuccess }) {
+  const { isLightTheme } = useSettings();
+  const isLight = isLightTheme;
+  
   const [formData, setFormData] = useState({
-    service_id: '',
-    title: '',
+    item_name: '',
+    category: 'hardware',
     description: '',
+    quantity: 1,
+    priority: 'medium',
     justification: '',
-    priority: 'normal',
-    required_by_date: '',
-    items: [{ name: '', description: '', quantity: 1, unit_price: '', component_type: 'hardware', category: 'other' }]
+    estimated_cost: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Debug: Log services when they change
   useEffect(() => {
-    console.log('NewRequestModal - services prop:', services);
-  }, [services]);
-
-  const addItem = () => {
-    setFormData({
-      ...formData,
-      items: [...formData.items, { name: '', description: '', quantity: 1, unit_price: '', component_type: 'hardware', category: 'other' }]
-    });
-  };
-
-  const updateItem = (index, field, value) => {
-    const newItems = [...formData.items];
-    newItems[index][field] = value;
-    setFormData({ ...formData, items: newItems });
-  };
-
-  const removeItem = (index) => {
-    if (formData.items.length > 1) {
-      const newItems = formData.items.filter((_, i) => i !== index);
-      setFormData({ ...formData, items: newItems });
+    if (request) {
+      setFormData({
+        item_name: request.item_name || '',
+        category: request.category || 'hardware',
+        description: request.description || '',
+        quantity: request.quantity || 1,
+        priority: request.priority || 'medium',
+        justification: request.justification || '',
+        estimated_cost: request.estimated_cost || '',
+      });
+    } else {
+      setFormData({
+        item_name: '',
+        category: 'hardware',
+        description: '',
+        quantity: 1,
+        priority: 'medium',
+        justification: '',
+        estimated_cost: '',
+      });
     }
-  };
+    setError('');
+  }, [request, isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -823,240 +407,269 @@ function NewRequestModal({ isOpen, onClose, services, onSuccess, isLightTheme })
     try {
       const submitData = {
         ...formData,
-        service_id: formData.service_id ? parseInt(formData.service_id) : null,
-        items: formData.items.filter(item => item.name.trim()).map(item => ({
-          ...item,
-          quantity: parseInt(item.quantity) || 1,
-          unit_price: item.unit_price ? parseFloat(item.unit_price) : null
-        }))
+        estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null,
       };
-
-      await inventoryAPI.createRequest(submitData);
+      
+      if (request) {
+        await inventoryAPI.update(request.id, submitData);
+      } else {
+        await inventoryAPI.create(submitData);
+      }
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to create request');
+      setError(err.response?.data?.detail || 'Failed to save request');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (!isOpen) return null;
+  const inputClass = `w-full px-4 py-2.5 rounded-lg border transition-colors ${
+    isLight 
+      ? 'bg-white border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20' 
+      : 'bg-slate-800 border-slate-600 text-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20'
+  } outline-none`;
+
+  const labelClass = `block text-sm font-medium mb-1.5 ${isLight ? 'text-gray-700' : 'text-slate-300'}`;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className={`w-full max-w-3xl rounded-2xl flex flex-col max-h-[90vh] ${
-        isLightTheme ? 'bg-white' : 'bg-gray-800'
-      }`}>
-        <div className={`flex-shrink-0 p-6 border-b rounded-t-2xl ${isLightTheme ? 'bg-white border-gray-200' : 'bg-gray-800 border-gray-700'}`}>
-          <div className="flex items-center justify-between">
-            <h2 className={`text-xl font-semibold ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-              New Inventory Request
-            </h2>
-            <button onClick={onClose}>
-              <X className={`w-5 h-5 ${isLightTheme ? 'text-gray-500' : 'text-gray-400'}`} />
-            </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={request ? 'Edit Request' : 'New Inventory Request'}
+      subtitle="Request hardware, software, or licenses for your team"
+      size="md"
+    >
+      <ModalForm onSubmit={handleSubmit}>
+        <ModalError message={error} />
+
+        <div>
+          <label className={labelClass}>Item Name *</label>
+          <input
+            type="text"
+            required
+            value={formData.item_name}
+            onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
+            placeholder="e.g., MacBook Pro, Visual Studio License"
+            className={inputClass}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Category *</label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className={inputClass}
+            >
+              <option value="hardware">Hardware</option>
+              <option value="software">Software</option>
+              <option value="license">License</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Priority</label>
+            <select
+              value={formData.priority}
+              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+              className={inputClass}
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isLightTheme ? 'text-gray-700' : 'text-gray-300'}`}>
-                Title *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g., Developer Workstations for Project Alpha"
-                className={`w-full px-4 py-2 rounded-lg border ${
-                  isLightTheme ? 'border-gray-300 bg-white' : 'border-gray-600 bg-gray-700 text-white'
-                }`}
-              />
-            </div>
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isLightTheme ? 'text-gray-700' : 'text-gray-300'}`}>
-                Related Service
-              </label>
-              <select
-                value={formData.service_id}
-                onChange={(e) => setFormData({ ...formData, service_id: e.target.value })}
-                className={`w-full px-4 py-2 rounded-lg border ${
-                  isLightTheme ? 'border-gray-300 bg-white' : 'border-gray-600 bg-gray-700 text-white'
-                }`}
-              >
-                <option value="">Select a service...</option>
-                {services && services.length > 0 ? (
-                  services.map((svc) => (
-                    <option key={svc.id} value={svc.id}>
-                      {svc.name} {svc.customer_name ? `- ${svc.customer_name}` : ''} {svc.status ? `(${svc.status})` : ''}
-                    </option>
-                  ))
-                ) : (
-                  <option value="" disabled>No services available</option>
-                )}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isLightTheme ? 'text-gray-700' : 'text-gray-300'}`}>
-                Priority
-              </label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                className={`w-full px-4 py-2 rounded-lg border ${
-                  isLightTheme ? 'border-gray-300 bg-white' : 'border-gray-600 bg-gray-700 text-white'
-                }`}
-              >
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </div>
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isLightTheme ? 'text-gray-700' : 'text-gray-300'}`}>
-                Required By Date
-              </label>
-              <input
-                type="date"
-                value={formData.required_by_date}
-                onChange={(e) => setFormData({ ...formData, required_by_date: e.target.value })}
-                className={`w-full px-4 py-2 rounded-lg border ${
-                  isLightTheme ? 'border-gray-300 bg-white' : 'border-gray-600 bg-gray-700 text-white'
-                }`}
-              />
-            </div>
-          </div>
-
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={`block text-sm font-medium mb-2 ${isLightTheme ? 'text-gray-700' : 'text-gray-300'}`}>
-              Justification
-            </label>
-            <textarea
-              value={formData.justification}
-              onChange={(e) => setFormData({ ...formData, justification: e.target.value })}
-              rows={2}
-              placeholder="Why is this request needed?"
-              className={`w-full px-4 py-2 rounded-lg border ${
-                isLightTheme ? 'border-gray-300 bg-white' : 'border-gray-600 bg-gray-700 text-white'
-              }`}
+            <label className={labelClass}>Quantity</label>
+            <input
+              type="number"
+              min="1"
+              value={formData.quantity}
+              onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
+              className={inputClass}
             />
           </div>
-
-          {/* Items */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className={`text-sm font-medium ${isLightTheme ? 'text-gray-700' : 'text-gray-300'}`}>
-                Items
-              </label>
-              <button
-                type="button"
-                onClick={addItem}
-                className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" /> Add Item
-              </button>
-            </div>
-            <div className="space-y-3">
-              {formData.items.map((item, index) => (
-                <div key={index} className={`p-4 rounded-lg ${isLightTheme ? 'bg-gray-50' : 'bg-gray-700'}`}>
-                  <div className="grid grid-cols-12 gap-3">
-                    <div className="col-span-4">
-                      <input
-                        type="text"
-                        placeholder="Item name *"
-                        value={item.name}
-                        onChange={(e) => updateItem(index, 'name', e.target.value)}
-                        className={`w-full px-3 py-2 rounded border text-sm ${
-                          isLightTheme ? 'border-gray-300 bg-white' : 'border-gray-600 bg-gray-800 text-white'
-                        }`}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <select
-                        value={item.component_type}
-                        onChange={(e) => updateItem(index, 'component_type', e.target.value)}
-                        className={`w-full px-3 py-2 rounded border text-sm ${
-                          isLightTheme ? 'border-gray-300 bg-white' : 'border-gray-600 bg-gray-800 text-white'
-                        }`}
-                      >
-                        <option value="hardware">Hardware</option>
-                        <option value="software">Software</option>
-                        <option value="license">License</option>
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="number"
-                        placeholder="Qty"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                        className={`w-full px-3 py-2 rounded border text-sm ${
-                          isLightTheme ? 'border-gray-300 bg-white' : 'border-gray-600 bg-gray-800 text-white'
-                        }`}
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <input
-                        type="number"
-                        placeholder="Unit price ($)"
-                        step="0.01"
-                        value={item.unit_price}
-                        onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                        className={`w-full px-3 py-2 rounded border text-sm ${
-                          isLightTheme ? 'border-gray-300 bg-white' : 'border-gray-600 bg-gray-800 text-white'
-                        }`}
-                      />
-                    </div>
-                    <div className="col-span-1 flex items-center justify-center">
-                      {formData.items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeItem(index)}
-                          className="text-red-500 hover:text-red-600"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <label className={labelClass}>Estimated Cost ($)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.estimated_cost}
+              onChange={(e) => setFormData({ ...formData, estimated_cost: e.target.value })}
+              placeholder="0.00"
+              className={inputClass}
+            />
           </div>
+        </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className={`flex-1 py-2 rounded-lg border ${
-                isLightTheme ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-600 text-gray-300 hover:bg-gray-700'
-              }`}
+        <div>
+          <label className={labelClass}>Description</label>
+          <textarea
+            rows={2}
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="Detailed description of the item..."
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label className={labelClass}>Justification</label>
+          <textarea
+            rows={2}
+            value={formData.justification}
+            onChange={(e) => setFormData({ ...formData, justification: e.target.value })}
+            placeholder="Why is this item needed?"
+            className={inputClass}
+          />
+        </div>
+      </ModalForm>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={submitting}>
+          Cancel
+        </Button>
+        <Button 
+          variant="primary" 
+          onClick={handleSubmit}
+          disabled={submitting || !formData.item_name}
+        >
+          {submitting ? 'Saving...' : (request ? 'Update Request' : 'Submit Request')}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+// AI Analysis Modal
+function AIAnalysisModal({ isOpen, onClose, requests }) {
+  const { isLightTheme } = useSettings();
+  const isLight = isLightTheme;
+  
+  const [analysis, setAnalysis] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const runAnalysis = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await aiAPI.analyzeInventory({ requests });
+      setAnalysis(response.data);
+    } catch (err) {
+      setError('Failed to run AI analysis. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setAnalysis(null);
+      setError('');
+    }
+  }, [isOpen]);
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="AI Inventory Analysis"
+      subtitle="Get intelligent insights about your inventory requests"
+      size="lg"
+    >
+      <div className="p-6">
+        {!analysis && !loading && (
+          <div className="text-center py-8">
+            <Sparkles className={`w-16 h-16 mx-auto mb-4 ${isLight ? 'text-primary-400' : 'text-primary-500'}`} />
+            <h3 className={`text-lg font-semibold mb-2 ${isLight ? 'text-gray-800' : 'text-white'}`}>
+              AI-Powered Analysis
+            </h3>
+            <p className={`max-w-md mx-auto mb-6 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+              Our AI will analyze your {requests.length} inventory request{requests.length !== 1 ? 's' : ''} and provide 
+              optimization suggestions, cost analysis, and procurement recommendations.
+            </p>
+            <Button 
+              variant="primary" 
+              onClick={runAnalysis}
+              leftIcon={<Sparkles className="w-4 h-4" />}
+              disabled={requests.length === 0}
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {submitting ? 'Creating...' : 'Create Request'}
-            </button>
+              Run Analysis
+            </Button>
+            {requests.length === 0 && (
+              <p className="text-sm text-red-500 mt-2">No requests to analyze</p>
+            )}
           </div>
-        </form>
+        )}
+
+        {loading && (
+          <div className="text-center py-12">
+            <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className={isLight ? 'text-gray-600' : 'text-slate-400'}>Analyzing your inventory requests...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
+            {error}
+          </div>
+        )}
+
+        {analysis && (
+          <div className="space-y-6">
+            {/* Summary */}
+            <div className={`p-4 rounded-lg ${isLight ? 'bg-gray-50 border border-gray-200' : 'bg-slate-800/50 border border-slate-700'}`}>
+              <h4 className={`font-semibold mb-2 ${isLight ? 'text-gray-800' : 'text-white'}`}>Summary</h4>
+              <p className={isLight ? 'text-gray-600' : 'text-slate-400'}>{analysis.summary || 'Analysis complete.'}</p>
+            </div>
+
+            {/* Recommendations */}
+            {analysis.recommendations && analysis.recommendations.length > 0 && (
+              <div>
+                <h4 className={`font-semibold mb-3 ${isLight ? 'text-gray-800' : 'text-white'}`}>Recommendations</h4>
+                <div className="space-y-2">
+                  {analysis.recommendations.map((rec, idx) => (
+                    <div 
+                      key={idx}
+                      className={`p-3 rounded-lg flex items-start gap-3 ${
+                        isLight ? 'bg-blue-50 border border-blue-100' : 'bg-blue-500/10 border border-blue-500/20'
+                      }`}
+                    >
+                      <CheckCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                      <p className={isLight ? 'text-gray-700' : 'text-slate-300'}>{rec}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cost Analysis */}
+            {analysis.cost_analysis && (
+              <div className={`p-4 rounded-lg ${isLight ? 'bg-green-50 border border-green-200' : 'bg-green-500/10 border border-green-500/20'}`}>
+                <h4 className={`font-semibold mb-2 ${isLight ? 'text-gray-800' : 'text-white'}`}>Cost Analysis</h4>
+                <p className={isLight ? 'text-gray-600' : 'text-slate-400'}>{analysis.cost_analysis}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </div>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+        {analysis && (
+          <Button variant="primary" onClick={runAnalysis} leftIcon={<Sparkles className="w-4 h-4" />}>
+            Re-run Analysis
+          </Button>
+        )}
+      </ModalFooter>
+    </Modal>
   );
 }
