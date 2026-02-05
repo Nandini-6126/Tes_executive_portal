@@ -183,14 +183,6 @@ export default function DashboardPage() {
             {hasData ? "Here's your organization overview" : "Get started by adding your first data"}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => navigate('/inquiries')} leftIcon={<FileText className="w-4 h-4" />}>
-            New Inquiry
-          </Button>
-          <Button variant="primary" onClick={() => navigate('/clients')} leftIcon={<Building2 className="w-4 h-4" />}>
-            Add Client
-          </Button>
-        </div>
       </div>
 
       {hasData ? (
