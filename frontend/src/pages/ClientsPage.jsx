@@ -383,16 +383,16 @@ function ClientModal({ isOpen, onClose, client, onSuccess, isLight }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative w-full max-w-lg rounded-2xl my-8 ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
-        <div className={`sticky top-0 p-6 border-b rounded-t-2xl ${isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-700'}`}>
+      <div className={`relative w-full max-w-lg rounded-2xl flex flex-col max-h-[90vh] ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
+        <div className={`flex-shrink-0 p-6 border-b rounded-t-2xl ${isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-700'}`}>
           <h2 className={`text-xl font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>
             {client ? 'Edit Client' : 'Add New Client'}
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {error}
@@ -573,10 +573,10 @@ function AddServiceModal({ isOpen, onClose, client, onSuccess, isLight }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative w-full max-w-lg rounded-2xl my-8 ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
-        <div className={`p-6 border-b rounded-t-2xl ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+      <div className={`relative w-full max-w-lg rounded-2xl flex flex-col max-h-[90vh] ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
+        <div className={`flex-shrink-0 p-6 border-b rounded-t-2xl ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
           <div className="flex items-center justify-between">
             <div>
               <h2 className={`text-xl font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>
@@ -592,7 +592,7 @@ function AddServiceModal({ isOpen, onClose, client, onSuccess, isLight }) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {error}
